@@ -4,6 +4,7 @@
 
 import joblib
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -83,3 +84,22 @@ print(probas[:5].round(3))
 joblib.dump(model, "model.joblib")
 joblib.dump(vec, "vectorizer.joblib")
 print("\nTallennettu: model.joblib, vectorizer.joblib")
+
+
+# --- 1.14: mallin 15 vahvinta signaalisanaa suoraan painoista ---
+# coef_[0] on painovektori, sama pituus ja järjestys kuin sanasto
+# (get_feature_names_out()) - molemmat tulevat samasta sovitetusta
+# vec/model-parista, siksi indeksointi täsmää.
+feature_names = vec.get_feature_names_out()
+coefs = model.coef_[0]
+
+top_real_idx = np.argsort(coefs)[-15:][::-1]   # suurimmat painot -> työntää kohti "real" (1)
+top_fake_idx = np.argsort(coefs)[:15]          # pienimmät (negatiivisimmat) -> työntää kohti "fake" (0)
+
+print("\n15 vahvinta 'real'-signaalisanaa:")
+for i in top_real_idx:
+    print(f"  {feature_names[i]:20s} {coefs[i]:.3f}")
+
+print("\n15 vahvinta 'fake'-signaalisanaa:")
+for i in top_fake_idx:
+    print(f"  {feature_names[i]:20s} {coefs[i]:.3f}")

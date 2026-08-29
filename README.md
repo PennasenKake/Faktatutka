@@ -53,4 +53,16 @@ LIAR-PLUS:n kuusi luokkaa (`true` → `pants-fire`) mapattiin binääriseksi:
 tarkkuuden ja epätasapainoisemman luokkajakauman. Lähdetiedosto sisälsi
 myös 2 täysin tyhjää riviä, jotka pudotettiin ennen käsittelyä.
 
+### Signaalisanat vahvistavat datavuodon (1.14)
+Mallin 15 vahvinta "real"-signaalisanaa (`model.coef_`) ovat lähes
+yksinomaan Reuters-uutistoimiston kirjoitusmuotoon liittyviä: `reuters`
+(paino 27.4 — ylivoimaisesti suurin yksittäinen piirre koko sanastossa),
+`said`, `washington`, kaikki viisi arkipäivää, ja `edt` (aikavyöhykelyhenne
+uutistoimistojen aikaleimoista — ei mitään tekemistä väitteen
+totuudenmukaisuuden kanssa). "Fake"-puolen vahvimmat sanat (`image`,
+`featured`, `getty`, `pic`) viittaavat puolestaan blogialustojen
+kuvatekstimuotoiluun. Malli erottaa siis kaksi julkaisuformaattia
+toisistaan, ei väitteiden totuudenmukaisuutta — sama havainto kuin
+kohdassa 1.8, nyt vahvistettuna suoraan mallin painoista.
+
 (täydentyy kerros kerrallaan)
