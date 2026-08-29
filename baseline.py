@@ -1,7 +1,8 @@
 # baseline.py
-# TF-IDF + logistinen regressio ISOT-datasetille, ja konkreettinen tarkistus
-# tunnetulle datavuodolle (askeleet 1.5-1.8).
+# TF-IDF + logistinen regressio ISOT-datasetille: koulutus, tulosarviointi,
+# tunnetun datavuodon todistus, ja mallin tallennus kerrosta 2 varten.
 
+import joblib
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -53,10 +54,32 @@ leak_check = df["text"].str.contains("Reuters", case=False).groupby(df["label"])
 print("\nReuters-maininnan osuus luokittain (0 = fake, 1 = real):")
 print(leak_check.round(3))
 
-testit = [
-    "Helsinki (STT) - Suomen hallitus ilmoitti tiistaina uudesta koulutusuudistuksesta.",
-    "WASHINGTON (Reuters) - The moon is made of cheese, scientists confirm.",
-]
-X_test_manual = vec.transform(testit)
-print(model.predict(X_test_manual))       # 0 = fake, 1 = real
-print(model.predict_proba(X_test_manual)) # kuinka varma malli on
+# --- 6. predict_proba (1.13) ---
+# model.predict() palauttaa jäykän luokan (0/1) - juuri sitä mitä
+# Faktatutka ei halua tehdä, koska teesi on kalibroitu arvio, ei tuomio.
+# predict_proba() palauttaa todennäköisyysjakauman: sarake 0 = P(fake),
+# sarake 1 = P(real), jokainen rivi summautuu ykköseen.
+probas = model.predict_proba(X_test_v)
+
+# Todistetaan konkreettisesti että predict() on vain predict_proba()
+# kynnystettynä 0.5:een - ei kaksi eri mekanismia vaan sama asia kahdella
+# tavalla luettuna. Hyvä tarkistaa itse ennen kuin luottaa siihen.
+manual_pred = (probas[:, 1] >= 0.5).astype(int)
+assert (manual_pred == model.predict(X_test_v)).all()
+print("\npredict() == predict_proba() kynnystettynä 0.5:een - vahvistettu")
+
+# Muutama esimerkki konkretisoimaan mitä probas oikeasti näyttää:
+# rivit joissa todennäköisyys on lähellä 0.5 ovat niitä joissa malli on
+# aidosti epävarma - juuri niitä joita predict() piilottaisi kokonaan.
+print("Esimerkki ensimmäisistä 5 testirivistä (P(fake), P(real)):")
+print(probas[:5].round(3))
+
+# --- 7. Mallin ja vectorizerin tallennus ---
+# joblib on optimoitu isoille numpy-taulukoille (mallin kertoimet,
+# vectorizerin sanasto) - scikit-learnin oma suositus pickle:n sijaan.
+# MOLEMMAT tiedostot tarvitaan: malli osaa käsitellä vain TF-IDF-vektoreita,
+# ei raakaa tekstiä - ilman tallennettua vectorizeria uutta syötettä ei voi
+# muuntaa samaan piirreavaruuteen (sanasto ja IDF-arvot ovat kiinni siinä).
+joblib.dump(model, "model.joblib")
+joblib.dump(vec, "vectorizer.joblib")
+print("\nTallennettu: model.joblib, vectorizer.joblib")
