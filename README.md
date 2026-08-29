@@ -22,4 +22,10 @@ näyttää mihin se perustuu.
 - [ ] 7. Selainlaajennus (valinnainen)
 
 ## Asennus
+
+BASELINE
+
+Tunnettu datavuoto: ISOT-baseline saavuttaa 99 % tarkkuuden, mutta se ei ole luotettava mittari. df["text"].str.contains("Reuters") -tarkistus osoittaa että sana "Reuters" esiintyy 99.8 %:ssa tosi-uutisia mutta vain 1.4 %:ssa vale-uutisia — malli oppii todennäköisesti tunnistamaan lähteen (Reuters-uutistoimiston kirjoitustyylin/dateline-muodon), ei väitteen totuudenmukaisuutta. Tämä tarkkuusluku ei siis edusta mallin kykyä yleistää muihin lähteisiin.
+
+
 (täydentyy kerros kerrallaan)
