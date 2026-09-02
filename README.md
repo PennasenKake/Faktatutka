@@ -4,7 +4,7 @@
 > epävarmuudella ja näkyvillä lähteillä. Ei tuomiota, vaan tutka.
 
 ## Tila
-Kehitteillä — kerros 2/7 (baseline ML)
+Kehitteillä — kerrokset 1–2 valmiit (baseline ML + pytest-testit), kerros 3/7 (LLM-arvio) alkamassa
 
 ## Mitä tämä on
 Faktatutka arvioi syötetyn uutistekstin tai väitteen uskottavuutta
@@ -14,7 +14,7 @@ näyttää mihin se perustuu.
 
 ## Kerrokset
 - [X] 1. Baseline (TF-IDF + logistinen regressio)
-- [ ] 2. Testit (pytest)
+- [X] 2. Testit (pytest)
 - [ ] 3. LLM-arvio (Ollama)
 - [ ] 4. RAG (lähdehaku)
 - [ ] 5. Käyttöliittymä (React)
@@ -54,7 +54,7 @@ LIAR-PLUS:n kuusi luokkaa (`true` → `pants-fire`) mapattiin binääriseksi:
 tarkkuuden ja epätasapainoisemman luokkajakauman. Lähdetiedosto sisälsi
 myös 2 täysin tyhjää riviä, jotka pudotettiin ennen käsittelyä.
 
-### Signaalisanat vahvistavat datavuodon (1.14)
+### Signaalisanat vahvistavat datavuodon
 Mallin 15 vahvinta "real"-signaalisanaa (`model.coef_`) ovat lähes
 yksinomaan Reuters-uutistoimiston kirjoitusmuotoon liittyviä: `reuters`
 (paino 27.4 — ylivoimaisesti suurin yksittäinen piirre koko sanastossa),
@@ -66,7 +66,7 @@ kuvatekstimuotoiluun. Malli erottaa siis kaksi julkaisuformaattia
 toisistaan, ei väitteiden totuudenmukaisuutta — sama havainto kuin
 kohdassa 1.8, nyt vahvistettuna suoraan mallin painoista.
 
-### WELFake-yleistyvyystesti (1.16, valinnainen)
+### WELFake-yleistyvyystesti
 ISOT- ja LIAR-PLUS-tulokset molemmat testaavat mallia saman datasetin
 sisällä (train/test-jako samasta lähteestä). Aidompi yleistyvyystesti on
 opettaa malli yhdellä datasetillä ja testata täysin toisella:
@@ -95,5 +95,44 @@ artikkeleista jotka eivät enää kanna ISOT:in Reuters-muotoilua (dateline,
 "said", viikonpäivät) - juuri niitä signaaleja joita malli oppi
 pitämään "real":na. Malli ei siis ole oppinut arvioimaan sisältöä, vaan
 yhtä kapeaa muotoilutunnistetta, ja soveltaa sen puuttumista väärin.
+
+## Testit (kerros 2)
+
+### Kattavuus lukuina
+
+| Tiedosto | Testejä | Mitä todistaa |
+|---|---|---|
+| `tests/test_baseline.py` | 6 | Malli ja vectorizer latautuvat oikeina tyyppeinä, `predict_proba()` palauttaa validin [0,1]-jakauman joka summautuu ykköseen, kaksi ilmiselvää real-esimerkkiä ja yksi ilmiselvä fake-esimerkki menevät oikeaan suuntaan |
+| `tests/test_edge_cases.py` | 5 | Tyhjä syöte, hyvin pitkä syöte, pelkät numerot, pelkät symbolit ja suomenkielinen syöte eivät kaadu — kaikki palauttavat rakenteellisesti validin todennäköisyysjakauman |
+
+11/11 vihreää. `scope="session"`-fixturet lataavat mallin ja vectorizerin levyltä vain kerran koko testiajolle uudelleenkoulutuksen sijaan.
+
+### Real/fake-esimerkit on valittu muotoilulla, ei totuusarvolla
+Testien real-esimerkit sisältävät tarkoituksella Reuters-dateline-muodon
+(`"WASHINGTON (Reuters) - ..."`) ja sanan `said`, fake-esimerkki
+blogityylisiä signaalisanoja (`watch`, `featured`, `image`, `like`) —
+samat piirteet jotka "Tunnettu datavuoto" ja "Signaalisanat" -osiot
+yllä jo osoittivat mallin todellisiksi päätöksentekoperusteiksi. Testi
+lukitsee mallin todellisen, opitun käytöksen paikoilleen — ei sitä
+onko jokin väite totta. Jos joku yrittäisi "korjata" epäonnistuneen
+testin syöttämällä geneeriseen tekstiin Reuters-muotoilua vain
+läpäistäkseen sen, se ei todistaisi mitään väitteen
+totuudenmukaisuudesta.
+
+### Kattavuusraportti paljasti tietoisen rajauksen
+`pytest --cov=. --cov-report=term-missing` näyttää 0 % kattavuuden
+`baseline.py`:lle, `baseline_liar.py`:lle, `Welfake_check.py`:lle ja
+`tfidf_check.py`:lle — ei siksi että koodi olisi rikki, vaan koska
+yksikään testi ei koskaan tuo (`import`) näitä tiedostoja. Testit
+lataavat vain valmiiksi tallennetun `model.joblib`/`vectorizer.joblib`-
+tiedoston ja todistavat sen käyttäytymisen, eivät itse
+koulutuslogiikkaa (`train_test_split`, `pd.concat`, TF-IDF-sovitus).
+Tämä on tietoinen rajaus, ei aukko joka huomattiin liian myöhään: jos
+koulutuslogiikkaan tulisi regressio, testit huomaisivat sen vasta
+seuraavalla `baseline.py`-ajolla ja mallin uudelleentallennuksella,
+eivät automaattisesti. Testi-infrastruktuuri itsessään (`conftest.py`,
+molemmat testitiedostot) on 100 % katettu — kokonaisluku 29 % on siis
+mittausvääristymä joka sisältää tarkoituksella testaamattomat
+kertakäyttöskriptit, ei todiste puutteellisesta testauksesta.
 
 (täydentyy kerros kerrallaan)
