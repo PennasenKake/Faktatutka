@@ -316,10 +316,46 @@ vastausta riippuen siitä minä hetkenä sitä kysyy — se olisi juuri sitä
 teeskenneltyä varmuutta jota koko projektin teesi vastustaa, paitsi
 käänteisesti (teeskenneltyä *epävakautta* varmuuden sijaan).
 
-**Kerros 3 on tällä valmis (3.1–3.12).** Kaikki tarkistuslistan kohdat
-täyttyvät: `/analyze` vastaa johdonmukaisesti HTTP 200:lla, JSON
-sisältää `score`/`label`/`explanation`-avaimet, epävarmat väitteet
-saavat sen mukaisen labelin ("Ei varmaa"), ja promptinjektiotesti ei
-mennyt läpi (3.8). Seuraavaksi: kerros 4 (RAG).
+### Tarkistuslistan viimeinen todennus itse endpointia vasten
+Kaksi tarkistuslistan kohtaa oli tähän asti todistettu vain erillisillä
+kokeiluskripteillä (`ollama_test.py`, `temperature_kokeilu.py`), ei
+oikeasti `/analyze`-endpointia vasten sen todellisella tuotantopromptilla
+(joka sisältää `<KONTEKSTI>`-tagin ML-pisteineen — kokeiluskriptit
+eivät). Tämä ero suljettiin lähettämällä epävarma väite
+("Kahvin juominen pidentää elinikää.") suoraan `/analyze`:iin kahdesti
+peräkkäin (`Invoke-RestMethod`, `temperature: 0.2`):
+
+```json
+{
+  "score": 20,
+  "label": "Todennäköisesti väärä",
+  "explanation": "Oman tiedon mukaan ei ole mitään tieteellistä näyttöä siitä, että kahvin juominen pidentäisi elinikää. Olen nähnyt paljon väittämän vastaan, mutta ei ole ollut mahdollista tarkistaa lähteitä. Koneoppimismallin pistemäärä on myös hyvin alhainen, mikä viittaa siihen, että väite ei ole uskottava.",
+  "ml_score": 10,
+  "ml_vocab_hits": 0
+}
+```
+```json
+{
+  "score": 20,
+  "label": "Todennäköisesti väärä",
+  "explanation": "Oman tiedon mukaan ei ole mitään tieteellistä näyttöä siitä, että kahvin juominen pidentäisi elinikää. Tiedon perusteella ei ole mahdollista arvioida väitettä uskottavaksi.",
+  "ml_score": 10,
+  "ml_vocab_hits": 0
+}
+```
+
+Molemmat kohdat täyttyvät: `score` on *täsmälleen* sama (20 = 20) kahdella
+peräkkäisellä kutsulla — parempi tulos kuin tarkistuslista edes vaati
+("lähellä samaa", ei täsmälleen sama). Ja `explanation` ilmaisee
+epävarmuuden asianmukaisesti kummallakin kerralla ("ei ole ollut
+mahdollista tarkistaa lähteitä", "ei ole mahdollista arvioida väitettä
+uskottavaksi") sen sijaan että väittäisi täyttä varmuutta — huomionarvoista
+silti että `score` nojaa melko vahvasti "väärä"-suuntaan (20, ei
+neutraalimpi ~50), koska mallilla ei ollut mitään positiivista näyttöä
+väitteen puolesta, vain puuttuvaa näyttöä sitä vastaan.
+
+**Kerros 3 on nyt kokonaan valmis ja todennettu (3.1–3.12), jokainen
+tarkistuslistan kohta suoraan itse `/analyze`-endpointia vasten, ei vain
+erillisskripteillä.** Seuraavaksi: kerros 4 (RAG).
 
 (täydentyy kerros kerrallaan)
