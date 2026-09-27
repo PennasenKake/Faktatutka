@@ -139,10 +139,9 @@ kertakäyttöskriptit, ei todiste puutteellisesta testauksesta.
 ## LLM-arvio (kerros 3, kesken)
 
 Ollama + llama3.1:8b paikallisesti. FastAPI-integraatio (`/analyze`-
-endpoint) on tehty ja todennettu elävää palvelinta vasten askeliin 3.9
-asti — ks. esimerkit alla. Jäljellä: 3.10 (commit), 3.11
-(`tests/test_analyze.py`, mockattu LLM-kutsu `TestClient`illa) ja 3.12
-(temperature-kokeilu 0.9 vs. 0.1).
+endpoint) on tehty ja todennettu elävää palvelinta vasten askeliin 3.11
+asti — ks. esimerkit alla. Jäljellä enää 3.12 (temperature-kokeilu
+0.9 vs. 0.1), jonka jälkeen kerros 3 on kokonaan valmis.
 
 ### Ympäristö
 CPU-only (ei GPU:ta käytössä) — generointi n. 10–30 s per vastaus lyhyelle
@@ -268,5 +267,29 @@ tietonsa perusteella sen sijaan että kopioisi sen suoraan lopputulokseen.
 läpinäkyvyyden vuoksi — käyttäjä näkee että ML-signaali oli heikko,
 ei vain lopputulosta joka teeskentelisi olevansa yhden mallin varma
 arvio.
+
+### Endpointin testaus mockatulla LLM-kutsulla (3.11)
+`tests/test_analyze.py` (4 testiä) testaa `/analyze`-endpointin HTTP-
+käyttäytymistä `unittest.mock.patch("main.call_llm")`illa ja FastAPI:n
+`TestClient`illa — ei koskaan ota oikeaa yhteyttä Ollamaan, joten testit
+ajavat nopeasti (< 3 s) eivätkä vaadi käynnissä olevaa palvelinta.
+Mockaus tapahtuu `call_llm`-rajapinnasta, ei syvemmältä
+(`ollama.generate`-tasolta), koska `call_llm`:n sisäinen toteutus
+(retry, JSON-validointi, fallback) on jo eri testikerroksen
+(`ollama_test.py`:n käsinajot) vastuulla — tässä testataan vain
+reagoiko HTTP-kerros oikein siihen mitä `call_llm` palauttaa.
+
+Yksi testeistä (`test_analyze_endpoint_surfaces_honest_fallback`)
+kytkeytyy suoraan projektin teesiin: kun LLM-kutsu ei tuota luotettavaa
+vastausta, `call_llm` palauttaa rehellisen `score: 50` -fallbackin, ei
+poikkeusta — testi varmistaa että tämä epävarmuus kulkeutuu asiakkaalle
+normaalina HTTP 200 -vastauksena, ei virheenä. Toinen testi
+(`test_analyze_endpoint_rejects_missing_text_field`) ei mockaa mitään,
+koska se testaa eri kerrosta: pydantic hylkää virheellisen pyynnön
+(422) FastAPI:n validointikerroksessa ennen kuin `analyze()` edes
+suoritetaan.
+
+Koko testisarja: 15/15 vihreää (11 kerroksesta 2 + 4 uutta), ajettu
+`python -m pytest tests/ -v` elävällä koneella.
 
 (täydentyy kerros kerrallaan)
