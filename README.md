@@ -64,7 +64,7 @@ totuudenmukaisuuden kanssa). "Fake"-puolen vahvimmat sanat (`image`,
 `featured`, `getty`, `pic`) viittaavat puolestaan blogialustojen
 kuvatekstimuotoiluun. Malli erottaa siis kaksi julkaisuformaattia
 toisistaan, ei väitteiden totuudenmukaisuutta — sama havainto kuin
-kohdassa 1.8, nyt vahvistettuna suoraan mallin painoista.
+edellä ("Tunnettu datavuoto"), nyt vahvistettuna suoraan mallin painoista.
 
 ### WELFake-yleistyvyystesti
 ISOT- ja LIAR-PLUS-tulokset molemmat testaavat mallia saman datasetin
@@ -135,7 +135,6 @@ molemmat testitiedostot) on 100 % katettu — kokonaisluku 29 % on siis
 mittausvääristymä joka sisältää tarkoituksella testaamattomat
 kertakäyttöskriptit, ei todiste puutteellisesta testauksesta.
 
-
 ## LLM-arvio (kerros 3, valmis)
 
 Ollama + llama3.1:8b paikallisesti. FastAPI-integraatio (`/analyze`-
@@ -152,7 +151,8 @@ JSON-muotoiselle arviolle. Malli: `llama3.1:8b`, `temperature: 0.2`,
 ### Score ja label lasketaan erikseen
 Malli tuottaa `score`-arvon promptista, mutta `label`-kenttää EI oteta
 mallin omasta vastauksesta — se lasketaan aina koodissa `score`-arvon
-perusteella (`label_from_score()`, `ollama_test.py`). Syy: malli tuotti
+perusteella (`label_from_score()` - sekä `ollama_test.py`:n kokeiluversiossa
+että tuotannon `main.py`:ssä). Syy: malli tuotti
 toistuvasti keskenään ristiriitaisia yhdistelmiä, esim. `score: 100` +
 `label: "Todennäköisesti totta"` (score sanoo täysin varma, label
 epäröi) tai `score: 100` + selitys "ehdottomasti totta" siitä huolimatta
@@ -194,7 +194,7 @@ sen sijaan että vastaisi parametrisesta muistista.
 
 ### Tekninen vakaus: JSON voi hajota, koodin on kestettävä se
 Koska malli voi jäädä toistoloopiin ja rikkoa JSON-muodon (ks. yllä),
-`analyze()`-funktioon lisättiin retry-logiikka (yrittää uudelleen kerran)
+`call_llm()`-funktioon lisättiin retry-logiikka (yrittää uudelleen kerran)
 ja rehellinen fallback-vastaus (`score: 50`, "en saanut luotettavaa
 vastausta") sille varalle että molemmat yritykset epäonnistuvat.
 Järjestelmä ei kaadu eikä teeskentele saaneensa vastausta jota ei tullut.
