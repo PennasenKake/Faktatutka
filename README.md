@@ -4,7 +4,7 @@
 > epävarmuudella ja näkyvillä lähteillä. Ei tuomiota, vaan tutka.
 
 ## Tila
-Kehitteillä — kerrokset 1–2 valmiit (baseline ML + pytest-testit), kerros 3/7 (LLM-arvio) alkamassa
+Kehitteillä — kerrokset 1–3 valmiit (baseline ML, pytest-testit, LLM-arvio), kerros 4/7 (RAG) seuraavana
 
 ## Mitä tämä on
 Faktatutka arvioi syötetyn uutistekstin tai väitteen uskottavuutta
@@ -15,7 +15,7 @@ näyttää mihin se perustuu.
 ## Kerrokset
 - [X] 1. Baseline (TF-IDF + logistinen regressio)
 - [X] 2. Testit (pytest)
-- [ ] 3. LLM-arvio (Ollama)
+- [X] 3. LLM-arvio (Ollama)
 - [ ] 4. RAG (lähdehaku)
 - [ ] 5. Käyttöliittymä (React)
 - [ ] 6. Docker
@@ -136,12 +136,13 @@ mittausvääristymä joka sisältää tarkoituksella testaamattomat
 kertakäyttöskriptit, ei todiste puutteellisesta testauksesta.
 
 
-## LLM-arvio (kerros 3, kesken)
+## LLM-arvio (kerros 3, valmis)
 
 Ollama + llama3.1:8b paikallisesti. FastAPI-integraatio (`/analyze`-
-endpoint) on tehty ja todennettu elävää palvelinta vasten askeliin 3.11
-asti — ks. esimerkit alla. Jäljellä enää 3.12 (temperature-kokeilu
-0.9 vs. 0.1), jonka jälkeen kerros 3 on kokonaan valmis.
+endpoint) on tehty ja todennettu elävää palvelinta vasten kaikkiin
+askeliin 3.1–3.12 asti — ks. esimerkit alla, päättyen
+temperature-kokeiluun joka perustelee suoraan miksi tuotannossa
+käytetään matalaa lämpötilaa (0.2).
 
 ### Ympäristö
 CPU-only (ei GPU:ta käytössä) — generointi n. 10–30 s per vastaus lyhyelle
@@ -291,5 +292,34 @@ suoritetaan.
 
 Koko testisarja: 15/15 vihreää (11 kerroksesta 2 + 4 uutta), ajettu
 `python -m pytest tests/ -v` elävällä koneella.
+
+### Temperature-kokeilu: miksi tuotanto käyttää 0.2:ta (3.12)
+Sama väite ("Kahvin juominen pidentää elinikää" — valittu tarkoituksella
+epävarmaksi/kiistanalaiseksi, ei selväksi totuudeksi tai valheeksi, koska
+liian ilmeinen väite ei näyttäisi lämpötilan vaikutusta lainkaan) ajettiin
+3× lämpötilalla 0.9 ja 3× lämpötilalla 0.1, elävää Ollama-palvelinta
+vasten (`temperature_kokeilu.py`):
+
+| Lämpötila | Scoret | Keskiarvo | Keskihajonta | Vaihteluväli |
+|---|---|---|---|---|
+| 0.9 | 70, 40, 40 | 50.0 | 17.3 | 30 |
+| 0.1 | 40, 40, 40 | 40.0 | 0.0 | 0 |
+
+Tulos on tarkalleen odotettu: korkealla lämpötilalla sama väite sai
+kolme eri pistemäärää (70/40/40) samalla ajolla — 30 pisteen
+vaihteluväli tarkoittaa käytännössä että arvio riippuisi satunnaisesta
+näytteenotosta, ei väitteestä itsestään. Matalalla lämpötilalla kaikki
+kolme ajoa antoivat identtisen pistemäärän (40, keskihajonta 0.0).
+Tämä on suora, mitattu perustelu `main.py`:n tuotantoasetukselle
+`temperature: 0.2`: faktantarkistuksessa sama syöte ei saa antaa eri
+vastausta riippuen siitä minä hetkenä sitä kysyy — se olisi juuri sitä
+teeskenneltyä varmuutta jota koko projektin teesi vastustaa, paitsi
+käänteisesti (teeskenneltyä *epävakautta* varmuuden sijaan).
+
+**Kerros 3 on tällä valmis (3.1–3.12).** Kaikki tarkistuslistan kohdat
+täyttyvät: `/analyze` vastaa johdonmukaisesti HTTP 200:lla, JSON
+sisältää `score`/`label`/`explanation`-avaimet, epävarmat väitteet
+saavat sen mukaisen labelin ("Ei varmaa"), ja promptinjektiotesti ei
+mennyt läpi (3.8). Seuraavaksi: kerros 4 (RAG).
 
 (täydentyy kerros kerrallaan)
