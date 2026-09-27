@@ -10,6 +10,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 
+
+
+
 # --- 1. Data sisään ja labelointi ---
 # Fake.csv ja True.csv ovat kaksi erillistä tiedostoa ilman valmista
 # label-saraketta - lisätään se itse ennen yhdistämistä.
