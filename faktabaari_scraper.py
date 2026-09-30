@@ -3,7 +3,11 @@
 #
 # Valitsimet (h1/og:title, article:published_time, article.post__content)
 # on todennettu inspect_html.py:n ajolla oikeaa sivua vasten 30.9.2026 -
-# ei arvattu. Kaksi asiaa jäi silti parhaan-yrityksen varaan, ks. alla.
+# ei arvattu. Skeema: {title, url, date, body_text} - EI tags-kenttaa,
+# ks. README 4.2: kokeiltiin, 0/208 artikkelista loytyi mitaan rel="tag"-
+# tai luokkanimipohjaisella haulla taydessa ajossa, pudotettu pois
+# kokonaan sen sijaan etta jatettaisiin aina-tyhja kentta nayttamaan
+# dataa jota ei ole.
 #
 # HUOM Claudelta: en voi ajaa tätä itse (ei verkkoyhteyttä faktabaari.fi:hin
 # tästä ympäristöstä). Aja itse, katso tuloste, liitä takaisin.
@@ -93,16 +97,6 @@ def parse_article(url: str) -> dict | None:
     body_tag = soup.find("article", class_="post__content")
     body_text = body_tag.get_text(" ", strip=True) if body_tag else None
 
-    # Tagit: parhaalla yrityksellä - rel="tag" ei löytänyt mitään
-    # inspect_html.py:n testiartikkelista, joten kokeillaan laveampaa
-    # luokkanimihakua. EI taattu kattaa kaikkia artikkeleita - ks.
-    # tulostettava kattavuusprosentti ajon lopussa ja README.
-    tags = [
-        a.get_text(strip=True)
-        for a in soup.find_all("a", class_=re.compile(r"tag|categor", re.I))
-        if a.get_text(strip=True)
-    ]
-
     if not title or not body_text:
         return None  # ei tarpeeksi sisältöä, jätetään korpuksen ulkopuolelle
 
@@ -110,7 +104,6 @@ def parse_article(url: str) -> dict | None:
         "title": title,
         "url": url,
         "date": date,
-        "tags": tags,
         "body_text": body_text,
     }
 
@@ -137,7 +130,6 @@ def main():
 
     articles = []
     failed = []
-    tag_hits = 0
 
     for i, url in enumerate(urls, 1):
         try:
@@ -152,8 +144,6 @@ def main():
             failed.append(url)
             continue
 
-        if article["tags"]:
-            tag_hits += 1
         articles.append(article)
         print(f"  [{i}/{len(urls)}] OK: {article['title'][:60]}")
         time.sleep(DELAY_SECONDS)
@@ -170,10 +160,6 @@ def main():
     print(f"\nValmis. {len(articles)} artikkelia tallennettu "
           f"faktabaari_corpus.json-tiedostoon.")
     print(f"Epäonnistuneita/ohitettuja: {len(failed)}")
-    tag_pct = 100 * tag_hits / max(len(articles), 1)
-    print(f"Tageja löytyi {tag_hits}/{len(articles)} artikkelista "
-          f"({tag_pct:.0f} %) - tagi-poiminta on parhaalla yrityksellä, "
-          f"ei taattu kattavuus (ks. README).")
     if failed:
         print("\nEpäonnistuneet/ohitetut URLit:")
         for u in failed:

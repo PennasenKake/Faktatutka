@@ -435,13 +435,44 @@ koneellisesti poimittavaa muotoa. Kirjoittaja on lähes aina "Toimitus"
 kategoriat löytyvät. Leipäteksti ~2500 sanaa, lähdeviittaukset
 upotettu proosaan, ei erillistä lähdelistaa.
 
-**Skeemapäätös: `{title, url, date, tags, body_text}` — ei
-verdict-kenttää.** Otsikon muotoilusta ei yritetä poimia automaattista
+**Skeemapäätös: `{title, url, date, body_text}` — ei verdict- eikä
+tags-kenttää.** Otsikon muotoilusta ei yritetä poimia automaattista
 tosi/epätosi-labelia: se ei olisi luotettavaa (muotoilu vaihtelee
 liikaa) eikä sitä tehtäisi ilman että teeskenneltäisiin rakenteellista
 varmuutta jota datassa ei ole — suoraan projektin teesin vastaista.
 RAG-kerroksen tehtävä on tuoda relevantti evidenssiteksti ja lähde
 LLM:n kontekstiksi, ei toistaa valmista labelia; ML-baseline ja LLM
 tuottavat oman scoren jo ennestään.
+
+**Tags-kenttä kokeiltiin ja pudotettiin — ei jätetty näyttämään
+dataa jota ei ole.** Ensin `rel="tag"`-linkit (0 osumaa yhdessä
+testiartikkelissa), sitten laveampi luokkanimihaku (`class` sisältää
+"tag" tai "categor") — täydessä 208 artikkelin ajossa tämäkin löysi
+**0/208 artikkelista mitään**. Todennäköisin syy: tagit renderöityvät
+asiakaspuolella (JS) sen sijaan että olisivat staattisessa HTML:ssä
+jonka `requests` näkee — ei varmistettu, mutta yhdenmukaista sen
+kanssa että kumpikaan staattinen haku ei löytänyt yhtäkään osumaa
+208:sta. Kenttä poistettiin kokonaan koodista sen sijaan että se
+jäisi skeemaan aina tyhjänä listana — pysyvästi tyhjä kenttä on
+huonompi kuin ei kenttää lainkaan, koska se teeskentelisi dataa jota
+ei koskaan tule.
+
+### Scraperin ensimmäinen täysi ajo (4.2, todennettu)
+`faktabaari_scraper.py` ajettiin oikeasti koneella 30.9.2026:
+
+| Mittari | Tulos |
+|---|---|
+| Artikkeli-URLeja löytyi (14 sivua) | 208 |
+| Artikkeleita tallennettu korpukseen | 208 |
+| Epäonnistuneita/ohitettuja | 0 |
+| Tageja löytyi | 0/208 (pudotettu skeemasta, ks. yllä) |
+
+208 on lähellä 4.1:n arvioita (~200–210) — tarkka luku nyt todennettu,
+ei enää arvio. 0 epäonnistumista/ohitusta tarkoittaa että jokaiselta
+sivulta löytyi sekä `og:title`/`h1` että `article.post__content` —
+valitsimet osuivat oikeaan koko korpuksen laajuudelta, ei vain
+yhdessä testiartikkelissa. Korpus on tallennettu `faktabaari_corpus.json`-
+tiedostoon (ei versionhallinnassa — generoitavissa uudelleen
+scraperilla, ei syytä committaa 208 artikkelin raakadataa gittiin).
 
 (täydentyy kerros kerrallaan)
