@@ -500,4 +500,20 @@ pistemäärän erolla muihin (esim. "Nato Suomi" → 2.57 oikealle artikkelille,
 0.00 aiheeseen liittymättömille) — BM25 toimii odotetusti pienelläkin
 korpuksella, ei vain teoriassa.
 
+### Ensimmäinen ajo oikealla datalla (4.3, todennettu)
+`rag/index.py` ajettiin koko 208 artikkelin korpusta vasten
+(aiemmin vain 5 artikkelin käsin rakennetulla testikorpuksella):
+
+| Kysely | Kärkitulos | Pistemäärä | Arvio |
+|---|---|---|---|
+| "koronarokote" | AstraZenecan koronarokotteen vetäminen markkinoilta | 6.59 | täsmäosuma |
+| "Nato Suomi" | Naton viides artikla ei takaa automaattista aseellista apua | 8.17 | täsmäosuma, kolme kärkeä kaikki relevantteja |
+| "EU budjetti" | Väite: EU:n budjetti on valtava | 9.86 | täsmäosuma |
+
+"koronarokote"-kyselyn kakkostulos (nuorten urheilijoiden äkkikuolemat,
+ei rokotuksista — 3.13 pistettä) on osittainen sanaosuma ("rokote") eikä
+aihepiiriltään väärä, ja pistemäärä erottaa sen selvästi täsmäosumasta.
+Yksinkertainen tokenisointi (ei lemmatisointia) riittää siis ensimmäiseen
+versioon oikealla datalla — sanavartalointikorjausta ei tarvita vielä.
+
 (täydentyy kerros kerrallaan)
