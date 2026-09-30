@@ -356,6 +356,58 @@ väitteen puolesta, vain puuttuvaa näyttöä sitä vastaan.
 
 **Kerros 3 on nyt kokonaan valmis ja todennettu (3.1–3.12), jokainen
 tarkistuslistan kohta suoraan itse `/analyze`-endpointia vasten, ei vain
-erillisskripteillä.** Seuraavaksi: kerros 4 (RAG).
+erillisskripteillä.**
+
+## RAG (kerros 4, alkamassa)
+
+### Lähdestrategia (4.1)
+Tehtävälistan oma oletus oli "kuratoitu korpus ensin (FEVER + Faktabaari),
+live-haku vasta jos aikaa jää". Tarkistettiin molemmat ennen kuin otettiin
+käyttöön, koska oletusta ei kannata ottaa annettuna:
+
+- **FEVER hylätty.** 185 445 väitettä Wikipediasta, mutta kokonaan
+  englanninkielinen — sama kieliongelma joka on jo dokumentoitu kerroksen 1
+  TF-IDF-baselinelle. Ei toisi kattavuutta suomenkielisille väitteille,
+  vaatisi monikielisen embeddauksen ilman vastaavaa hyötyä.
+- **Google Fact Check Tools API selvitettiin mutta ei otettu käyttöön.**
+  Tämä on eri asia kuin "live-haku" — strukturoitu API joka indeksoi
+  `ClaimReview`-merkittyjä faktantarkistuksia. Ei kuitenkaan testattu
+  loppuun asti: Google Cloud -projektin luonti olisi saattanut vaatia
+  laskutustilin lisäämisen, mikä koettiin epämukavaksi pelkän
+  kattavuustestin takia. **Tämä ei siis ole teknisesti poissuljettu
+  vaihtoehto** — jos joskus halutaan laajempaa, useamman julkaisijan
+  kattavaa faktantarkistusdataa ilman scrape-työtä, tämä kannattaa
+  kokeilla uudelleen (`toolbox.google.com/factcheck/explorer` selaimessa
+  ilman kirjautumista, tai API avaimella).
+- **Muut englanninkieliset faktantarkistajat (Snopes, PolitiFact,
+  FactCheck.org) hylätty** samasta kieliongelmasta kuin FEVER.
+- **Yle/HS yleismediana hylätty tästä kerroksesta.** Ne ovat uutisia, ei
+  valmiita faktantarkistuksia — vaatisivat oman väitteenpoiminnan
+  artikkeleista, enemmän työtä kuin Faktabaari-scrape.
+- **Live-haku (Serper/Tavily/Brave/DuckDuckGo) pysyy hylättynä MVP:stä.**
+  Kustannus, luotettavuus ja monimutkaisuus eivät ole perusteltuja ennen
+  kuin kuratoitu perusta on pystyssä — sama johtopäätös kuin
+  tehtävälistan oma suositus, vain eri reittiä sinne päädyttynä.
+
+**Päätös: Faktabaari (faktabaari.fi) scrapataan omaksi korpukseksi.**
+Ei valmis API tai ladattava datasetti — 14 sivua HTML-artikkeleita,
+arviolta ~130–140 faktantarkistusta, CC-lisensoitu (tarkka variantti
+tarkistettava ennen julkaisua). Pieni koko on tietoinen valinta, ei
+puute: kapea, suomenkielinen, oikean aihepiirin (poliittiset ja
+ajankohtaiset väitteet) korpus, jossa moni kysely päätyy rehellisesti
+"en löytänyt lähdettä" -tilaan — tämä on suunnitelman mukaista, ei
+virhe peitettäväksi.
+
+**Hakutekniikka: BM25 ensin, embeddaus vasta jos tarpeen.** Koska
+korpus on pieni (~130–140 dokumenttia), puhdas avainsanapohjainen
+osuvuuslaskenta (`rank_bm25`-Python-paketti, ei koneoppimismallia
+lainkaan) saattaa riittää kokonaan ensimmäiseen versioon — murto-osa
+embeddaus-ratkaisun monimutkaisuudesta. Jos haun laatu ei riitä
+BM25:llä, seuraava askel on kevyt monikielinen embeddausmalli
+(`bge-m3` tai `e5-small`, molemmat ajettavissa paikallisesti ja
+tukevat suomea) ja Chroma vektoritietokantana — puhdas Python-kirjasto
+ilman erillistä palvelinprosessia, sopii yhden kehittäjän
+projektiin paremmin kuin Qdrant (vaatisi oman palvelimen) tai raaka
+FAISS (matalan tason kirjasto, enemmän itse rakennettavaa).
 
 (täydentyy kerros kerrallaan)
