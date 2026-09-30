@@ -475,4 +475,29 @@ yhdessä testiartikkelissa. Korpus on tallennettu `faktabaari_corpus.json`-
 tiedostoon (ei versionhallinnassa — generoitavissa uudelleen
 scraperilla, ei syytä committaa 208 artikkelin raakadataa gittiin).
 
+### Hakuindeksi: BM25 (4.3, korjattu tehtävätekstistä)
+
+Tehtävälistan oma 4.3 ehdotti suoraan embeddaus-skriptiä (`all-MiniLM-L6-v2`)
+— ristiriidassa 4.1-päätöksen kanssa kahdella tavalla: (1) ohitti "BM25
+ensin" -järjestyksen kokonaan, ja (2) `all-MiniLM-L6-v2` ei ole
+monikielinen malli eikä tue suomea kunnolla — olisi toistanut saman
+virheen kuin hylätty FEVER ja kerroksen 1 ISOT-datavuoto: englanninkielinen
+työkalu suomenkieliselle datalle. Korjattu ennen koodausta samaan tapaan
+kuin 4.2:n FEVER/Faktabaari-ristiriita.
+
+`rag/index.py` rakentaa BM25-indeksin (`rank_bm25`-paketti) 208 artikkelin
+korpuksesta. Tokenisointi on tietoisen yksinkertainen (`lower()` + regex,
+ei lemmatisointia) — suomen taivutusmuodot jäävät eri sanoiksi BM25:lle,
+mikä on tunnettu, dokumentoitu rajoitus, ei unohdus. Indeksi tallennetaan
+picklenä (`rag/bm25_index.pkl`, ei versionhallinnassa — generoitavissa
+uudelleen) jotta `/analyze` voi ladata sen käynnistyessä ilman
+uudelleenindeksointia joka pyynnöllä.
+
+Logiikka todennettu käsin rakennetulla 5 artikkelin testikorpuksella ennen
+oikeaa dataa vasten ajoa: jokainen kolmesta testikyselystä (koronarokote,
+Nato Suomi, EU budjetti) nosti juuri oikean artikkelin kärkeen selvällä
+pistemäärän erolla muihin (esim. "Nato Suomi" → 2.57 oikealle artikkelille,
+0.00 aiheeseen liittymättömille) — BM25 toimii odotetusti pienelläkin
+korpuksella, ei vain teoriassa.
+
 (täydentyy kerros kerrallaan)
