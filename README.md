@@ -391,12 +391,13 @@ käyttöön, koska oletusta ei kannata ottaa annettuna:
 
 **Päätös: Faktabaari (faktabaari.fi) scrapataan omaksi korpukseksi.**
 Ei valmis API tai ladattava datasetti — 14 sivua HTML-artikkeleita,
-arviolta ~130–140 faktantarkistusta, CC-lisensoitu (tarkka variantti
-tarkistettava ennen julkaisua). Pieni koko on tietoinen valinta, ei
-puute: kapea, suomenkielinen, oikean aihepiirin (poliittiset ja
-ajankohtaiset väitteet) korpus, jossa moni kysely päätyy rehellisesti
-"en löytänyt lähdettä" -tilaan — tämä on suunnitelman mukaista, ei
-virhe peitettäväksi.
+arviolta ~200–210 faktantarkistusta (sivu 1–13 á ~15 artikkelia, sivu
+14 viimeisenä 10 — tarkka luku selviää vasta kun scraperi ajetaan),
+CC-lisensoitu (tarkka variantti tarkistettava ennen julkaisua). Pieni
+koko on tietoinen valinta, ei puute: kapea, suomenkielinen, oikean
+aihepiirin (poliittiset ja ajankohtaiset väitteet) korpus, jossa moni
+kysely päätyy rehellisesti "en löytänyt lähdettä" -tilaan — tämä on
+suunnitelman mukaista, ei virhe peitettäväksi.
 
 **Hakutekniikka: BM25 ensin, embeddaus vasta jos tarpeen.** Koska
 korpus on pieni (~130–140 dokumenttia), puhdas avainsanapohjainen
@@ -409,5 +410,38 @@ tukevat suomea) ja Chroma vektoritietokantana — puhdas Python-kirjasto
 ilman erillistä palvelinprosessia, sopii yhden kehittäjän
 projektiin paremmin kuin Qdrant (vaatisi oman palvelimen) tai raaka
 FAISS (matalan tason kirjasto, enemmän itse rakennettavaa).
+
+### Artikkelirakenne ja listauksen haku (4.2, valmisteilla)
+
+**Sitemap.xml hylätty enumerointitapana — se on vanhentunut.** 4.1:ssä
+suunniteltiin alun perin käyttää sivuston `sitemap.xml`:ää artikkeli-
+URL:ien listaukseen sivutuksen sijaan. Tarkistettiin ennen koodausta:
+tiedoston tuorein `lastmod`-arvo on 2022-06-08, eikä se sisällä
+yhtäkään tuoretta (2025-2026) artikkelia jotka ovat oikeasti sivustolla
+näkyvissä. Myös yleiset WordPress-vaihtoehdot (`/wp-sitemap.xml`,
+`/sitemap_index.xml`) palauttavat 404. Sivustolla ei siis ole
+ajantasaista sitemapia lainkaan — tämä oli väärä oletus, korjattu ennen
+kuin siitä ehti tulla koodia. **Enumerointi tehdään sivutuksen kautta**
+(`/fakta/sivu/1/` … `/fakta/sivu/14/`), joka todennettiin toimivaksi ja
+sisältää ajantasaisen sisällön.
+
+**Artikkelin rakenne (todennettu yhdestä oikeasta artikkelista,
+COVID-ylikuolleisuus-juttu):** ei erillistä verdict-badgea ("tosi" /
+"epätosi" / "harhaanjohtava"). Otsikko itsessään toimii verdiktinä
+vaihtelevalla muotoilulla ("...on virheellinen", "...on liioiteltu",
+"...on osittain totta", "toisin kuin X väittää") — ei yhtenäistä,
+koneellisesti poimittavaa muotoa. Kirjoittaja on lähes aina "Toimitus"
+(ei hyödyllinen kenttä). Päivämäärä muodossa DD.MM.YYYY. Tagit/
+kategoriat löytyvät. Leipäteksti ~2500 sanaa, lähdeviittaukset
+upotettu proosaan, ei erillistä lähdelistaa.
+
+**Skeemapäätös: `{title, url, date, tags, body_text}` — ei
+verdict-kenttää.** Otsikon muotoilusta ei yritetä poimia automaattista
+tosi/epätosi-labelia: se ei olisi luotettavaa (muotoilu vaihtelee
+liikaa) eikä sitä tehtäisi ilman että teeskenneltäisiin rakenteellista
+varmuutta jota datassa ei ole — suoraan projektin teesin vastaista.
+RAG-kerroksen tehtävä on tuoda relevantti evidenssiteksti ja lähde
+LLM:n kontekstiksi, ei toistaa valmista labelia; ML-baseline ja LLM
+tuottavat oman scoren jo ennestään.
 
 (täydentyy kerros kerrallaan)
