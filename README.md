@@ -400,7 +400,8 @@ kysely päätyy rehellisesti "en löytänyt lähdettä" -tilaan — tämä on
 suunnitelman mukaista, ei virhe peitettäväksi.
 
 **Hakutekniikka: BM25 ensin, embeddaus vasta jos tarpeen.** Koska
-korpus on pieni (~130–140 dokumenttia), puhdas avainsanapohjainen
+korpus on pieni (4.1-vaiheessa arvioitu ~130–140, todennettu 4.2:ssa
+208 dokumenttia — ks. alla), puhdas avainsanapohjainen
 osuvuuslaskenta (`rank_bm25`-Python-paketti, ei koneoppimismallia
 lainkaan) saattaa riittää kokonaan ensimmäiseen versioon — murto-osa
 embeddaus-ratkaisun monimutkaisuudesta. Jos haun laatu ei riitä
@@ -515,6 +516,43 @@ ei rokotuksista — 3.13 pistettä) on osittainen sanaosuma ("rokote") eikä
 aihepiiriltään väärä, ja pistemäärä erottaa sen selvästi täsmäosumasta.
 Yksinkertainen tokenisointi (ei lemmatisointia) riittää siis ensimmäiseen
 versioon oikealla datalla — sanavartalointikorjausta ei tarvita vielä.
+
+### Tehtävälistan 4.4, 4.5, 4.10, 4.11 — mitä BM25-päätös niille teki
+
+Nämä neljä tehtävälistan askelta on kirjoitettu embeddaus+vektorikanta-
+arkkitehtuurille (4.1/4.3:n korjauksen vastainen oletus), eikä niitä ole
+tähän mennessä käsitelty erikseen muualla README:ssä — kirjattu tähän
+ettei se jää hiljaiseksi, dokumentoimattomaksi aukoksi:
+
+- **4.4 ("Indeksoi dokumentit vektorikantaan (Chroma), tallenna kanta
+  levylle")** — toteutunut BM25-vastineena: `rag/index.py`:n
+  `build_index()` rakentaa BM25-indeksin ja pickleöi sen levylle
+  (`rag/bm25_index.pkl`), ks. 4.3. Ei Chromaa, ei erillistä vektorikantaa
+  — tarpeeton tälle arkkitehtuurille.
+- **4.5 ("rag/retrieve.py — Hakufunktio: väite → top-k relevantit
+  dokumentit")** — toteutunut, mutta EI omana tiedostonaan. Hakufunktio
+  (`search()`) asuu samassa tiedostossa kuin indeksin rakennus
+  (`rag/index.py`), ei erillisessä `rag/retrieve.py`:ssä. Tietoinen
+  valinta ("ei ylimääräistä rakennetta" -periaate), ei unohdus — BM25:n
+  koko mekaniikka (tokenisointi, rakennus, haku) on niin pieni (< 70
+  riviä) että kahden tiedoston erottelu olisi ylimääräistä rakennetta
+  ilman hyötyä.
+- **4.10 ("Kokeile cosine similarity -esimerkkiä käsin")** — EI
+  SOVELLETTAVISSA. Cosine similarity on embeddaus-vektoreiden
+  samankaltaisuusmitta; BM25 ei käytä sitä, se laskee pistemäärän
+  termitaajuuden ja käänteisen dokumenttitaajuuden (TF/IDF-tyyppinen)
+  summana. BM25:n vastaava "käsin laske ennen kuin luotat kirjastoon"
+  -vaihe tehtiin toisin: 4.3:n käsin rakennettu 5 artikkelin
+  testikorpus + tunnettujen pisteiden tarkistus, ja tämän löydöksen
+  (yllä, "Väärä osuma korjattu") tokenitason erittely — sama tarkoitus
+  (ymmärrä mekaniikka, älä luota kirjastoon sokkona), eri tekniikka.
+- **4.11 ("Kokeile chunking-kokoa kahdella arvolla")** — EI
+  SOVELLETTAVISSA. Chunking (dokumentin pilkkominen pienempiin paloihin
+  ennen embeddausta) on tarpeellista koska embeddausmalleilla on
+  tokenraja ja samankaltaisuus heikkenee pitkillä teksteillä. BM25
+  pisteyttää koko dokumentin kerralla eikä pilko sitä — relevantti
+  vain, jos/kun embeddaus otetaan käyttöön myöhemmin (ks. 4.1:n
+  "embeddaus vasta jos tarpeen" -polku).
 
 ### Haun yhdistäminen /analyze-endpointiin (4.6, 4.7 — todennettu)
 
