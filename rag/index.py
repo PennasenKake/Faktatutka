@@ -41,7 +41,7 @@ def tokenize(text: str) -> list[str]:
 def build_index(corpus_path: Path = CORPUS_PATH, index_path: Path = INDEX_PATH):
     if not corpus_path.exists():
         print(f"Korpusta ei löytynyt: {corpus_path}")
-        print("Aja ensin: python faktabaari_scraper.py")
+        print("Aja ensin juurikansiosta: python scripts/faktabaari_scraper.py")
         sys.exit(1)
 
     with open(corpus_path, "r", encoding="utf-8") as f:

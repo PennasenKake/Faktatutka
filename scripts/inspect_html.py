@@ -10,7 +10,7 @@
 # koneesi oikean, rajoittamattoman verkkoyhteyden tähän yhteen
 # kertaluonteiseen ajoon.
 #
-# Aja tämä itse (`python inspect_html.py`) ja liitä koko tuloste takaisin.
+# Aja tämä itse juurikansiosta (`python scripts/inspect_html.py`) ja liitä koko tuloste takaisin.
 # Sen perusteella lukitsen scraperin oikeat valitsimet (title/date/tags/
 # body) sen sijaan että arvaisin ne sokkona pelkän markdown-yhteenvedon
 # perusteella.

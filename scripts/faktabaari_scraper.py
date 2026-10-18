@@ -2,7 +2,7 @@
 # Kerää Faktabaari.fi:n faktantarkistukset RAG-korpukseksi (kerros 4).
 #
 # Valitsimet (h1/og:title, article:published_time, article.post__content)
-# on todennettu inspect_html.py:n ajolla oikeaa sivua vasten 30.9.2026 -
+# on todennettu scripts/inspect_html.py:n ajolla oikeaa sivua vasten 30.9.2026 -
 # ei arvattu. Skeema: {title, url, date, body_text} - EI tags-kenttaa,
 # ks. README 4.2: kokeiltiin, 0/208 artikkelista loytyi mitaan rel="tag"-
 # tai luokkanimipohjaisella haulla taydessa ajossa, pudotettu pois
