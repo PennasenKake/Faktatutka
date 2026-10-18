@@ -4,7 +4,7 @@
 > epävarmuudella ja näkyvillä lähteillä. Ei tuomiota, vaan tutka.
 
 ## Tila
-Kehitteillä — kerrokset 1–3 valmiit (baseline ML, pytest-testit, LLM-arvio), kerros 4/7 (RAG) seuraavana
+Kehitteillä — kerrokset 1–3 valmiit (baseline ML, pytest-testit, LLM-arvio). Kerros 4/7 (RAG) käynnissä: lähdestrategia, korpus (208 artikkelia) ja BM25-hakuindeksi valmiit ja todennettu (4.1–4.3); haun yhdistäminen /analyze-endpointiin ja RAG:n omat testit puuttuvat vielä.
 
 ## Mitä tämä on
 Faktatutka arvioi syötetyn uutistekstin tai väitteen uskottavuutta
