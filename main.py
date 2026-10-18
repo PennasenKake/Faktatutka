@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 import joblib
 import ollama
 
-from rag.index import load_index, search as bm25_search
+from rag.index import load_index, search as bm25_search, tokenize
 
 # Ei lukita mallinimeä koodiin — ks. askeleen 3.1 huomautus, mallit vanhenevat.
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
@@ -71,14 +71,35 @@ if CORPUS_PATH.exists():
         for _article in json.load(f)["articles"]:
             _CORPUS_BODY_BY_URL[_article["url"]] = _article["body_text"]
 
-# BM25-pisteet EIVÄT ole normalisoituja [0,1]-välille — ne riippuvat
-# korpuksen koosta ja kyselyn pituudesta. Tämä kynnys on tarkoituksen-
-# mukaisesti varovainen, käsin valittu havainto 4.3:n oikeista
-# testituloksista (relevantit osumat pisteillä 2.6–9.9, epärelevantit
-# 0.00) — EI tilastollisesti johdettu raja. Tarkoitus: hylätä varma
-# kohina, ei tarkka kalibrointi. Jos 4.8:n ääripäätestit paljastavat
-# tämän olevan väärä, säädä tätä.
+# KORJATTU 4.8:n jälkeen — ks. README ("Väärä osuma korjattu (4.8
+# jälkeen, todennettu)"). RAG_MIN_SCORE = 1.0 YKSIN osoittautui
+# vaaralliseksi oikealla 208 artikkelin korpuksella: testi "Marsissa asuu
+# vihreitä pikku-ukkoja" sai pisteen 5.27 YHDEN sanan ("asuu") osumasta.
+# Syy: BM25:n IDF nostaa harvinaisten sanojen painoa, ja pienessä (208
+# art.) korpuksessa aivan tavallinenkin suomen sana (esim. "asuu") voi
+# osua kirjaimellisesti vain 4/208 artikkeliin ihan sattumalta — ei
+# koska se olisi aiheen kannalta erottava sana. Pelkkä pistekynnys ei
+# näe eroa "yksi sattumaosuma" ja "aidosti aiheeseen liittyvä teksti"
+# välillä.
+#
+# Korjaus: vaaditaan score-kynnyksen LISÄKSI, että osuma perustuu
+# useampaan kuin yhteen kyselyn sanaan (ks. retrieve_sources). Pelkkä
+# pistekynnyksen nosto ei olisi ollut turvallinen korjaus — väärät
+# osumat (5.27, 4.54) olivat lähellä aidon yksisanaisen kyselyn
+# pistettä (koronarokote: 6.59), eikä mitään uutta kynnystä olisi
+# voinut perustella paremmin kuin alkuperäistä 1.0:aa. RAG_MIN_SCORE
+# jää silti karkeaksi, käsin valituksi toissijaiseksi suodattimeksi
+# (hylkää varman 0.00-kohinan), EI tilastollisesti johdetuksi rajaksi.
 RAG_MIN_SCORE = 1.0
+# Montako ERI kyselyn sanaa pitää löytyä artikkelin tekstistä, jotta
+# osuma hyväksytään. Jos kysely itsessään on lyhyempi (esim. yksi sana
+# kuten "koronarokote"), vaaditaan kaikki sen sanat — ei enempää kuin
+# kyselyssä on sanoja ylipäätään.
+RAG_MIN_TOKEN_OVERLAP = 2
+# Ehdokaspooli jota haetaan ENNEN suodatusta — isompi kuin RAG_TOP_K,
+# jotta suodatuksen pudottamien ehdokkaiden tilalle jää vielä
+# tarkistettavaa.
+RAG_SEARCH_K = 8
 RAG_TOP_K = 3
 RAG_SNIPPET_CHARS = 500
 
@@ -172,18 +193,36 @@ def label_from_score(score: int) -> str:
 
 def retrieve_sources(claim: str) -> list[Source]:
     """Hakee Faktabaari-korpuksesta relevantit lähteet BM25:llä (kerros 4).
-    Palauttaa tyhjän listan jos indeksiä ei ole ladattu TAI mikään osuma
-    ei ylitä kynnystä — molemmissa tapauksissa rehellisesti tyhjä, ei
-    keksitty lähde (projektin teesi: "en löytänyt lähdettä" on kelvollinen
-    vastaus, ei virhe)."""
+    Palauttaa tyhjän listan jos indeksiä ei ole ladattu, tai jos mikään
+    osuma ei ylitä pistekynnystä EIKÄ perustu riittävän moneen eri
+    kyselysanaan — molemmissa tapauksissa rehellisesti tyhjä, ei keksitty
+    lähde (projektin teesi: "en löytänyt lähdettä" on kelvollinen vastaus,
+    ei virhe).
+
+    Kaksi erillistä suodatinta, molemmat pitää läpäistä:
+    1. score >= RAG_MIN_SCORE — hylkää varman kohinan (BM25 0.00).
+    2. vähintään RAG_MIN_TOKEN_OVERLAP eri kyselysanaa löytyy artikkelin
+       leipätekstistä kirjaimellisesti — hylkää sen, että YKSI sattumalta
+       harvinainen mutta aiheen kannalta merkityksetön sana (esim.
+       "asuu") riittäisi ylittämään pistekynnyksen pienessä korpuksessa."""
     if _BM25 is None:
         return []
-    raw_results = bm25_search(_BM25, _BM25_METADATA, claim, top_k=RAG_TOP_K)
-    return [
-        Source(title=r["title"], url=r["url"], score=r["score"])
-        for r in raw_results
-        if r["score"] >= RAG_MIN_SCORE
-    ]
+
+    query_tokens = set(tokenize(claim))
+    min_overlap = min(RAG_MIN_TOKEN_OVERLAP, len(query_tokens)) if query_tokens else 0
+
+    raw_results = bm25_search(_BM25, _BM25_METADATA, claim, top_k=RAG_SEARCH_K)
+    sources: list[Source] = []
+    for r in raw_results:
+        if r["score"] < RAG_MIN_SCORE:
+            continue
+        doc_tokens = set(tokenize(_CORPUS_BODY_BY_URL.get(r["url"], "")))
+        if len(query_tokens & doc_tokens) < min_overlap:
+            continue
+        sources.append(Source(title=r["title"], url=r["url"], score=r["score"]))
+        if len(sources) >= RAG_TOP_K:
+            break
+    return sources
 
 
 def build_rag_context(sources: list[Source]) -> str:

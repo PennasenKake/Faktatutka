@@ -151,3 +151,28 @@ def test_analyze_endpoint_sources_empty_for_unrelated_claim(mock_generate, clien
 
     assert response.status_code == 200
     assert response.json()["sources"] == []
+
+
+@patch("main.ollama.generate")
+def test_analyze_endpoint_filters_single_incidental_token_match(mock_generate, client):
+    """Regressiotesti oikealle löydetylle bugille (ks. README,
+    'Vaara osuma korjattu'): yllä oleva testi ei paljastanut aiemmin
+    todellista ongelmaa, koska testikorpuksella ei sattunut olemaan
+    yhteisia sanoja. Oikealla 208 artikkelin korpuksella kysely
+    "Marsissa asuu vihreita pikku-ukkoja" sai pisteen 5.27 YHDEN sanan
+    ("asuu") kirjaimellisesta osumasta yhteen täysin aiheeseen
+    liittymättömään artikkeliin. Tämä testi varmistaa, etta pelkka
+    yhden sanan sattumaosuma ei enää riitä ylittämään suodattimen -
+    vaaditaan useampi eri kyselysana, ks. retrieve_sources()."""
+    mock_generate.return_value = _fake_ollama_response()
+
+    response = client.post(
+        "/analyze", json={"text": "Marsissa asuu vihreitä pikku-ukkoja"}
+    )
+
+    assert response.status_code == 200
+    sources = response.json()["sources"]
+    assert sources == [], (
+        f"odotettiin tyhjaa listaa, saatiin {sources} - jos tämä palaa, "
+        "RAG_MIN_TOKEN_OVERLAP-suodatin ei enää toimi oikealla korpuksella"
+    )

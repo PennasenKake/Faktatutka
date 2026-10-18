@@ -4,7 +4,7 @@
 > epävarmuudella ja näkyvillä lähteillä. Ei tuomiota, vaan tutka.
 
 ## Tila
-Kehitteillä — kerrokset 1–3 valmiit (baseline ML, pytest-testit, LLM-arvio). Kerros 4/7 (RAG) käynnissä: lähdestrategia, korpus (208 artikkelia) ja BM25-hakuindeksi valmiit ja todennettu (4.1–4.3); haun yhdistäminen /analyze-endpointiin ja RAG:n omat testit puuttuvat vielä.
+Kehitteillä — kerrokset 1–3 valmiit (baseline ML, pytest-testit, LLM-arvio). Kerros 4/7 (RAG) käynnissä: lähdestrategia, korpus (208 artikkelia), BM25-hakuindeksi ja haun yhdistäminen /analyze-endpointiin valmiit ja todennettu (4.1–4.3, 4.6–4.8), mukaan lukien oikealta datalta löytynyt ja korjattu väärä-osuma-bugi (ks. alla). Seuraavaksi: 4.9 (commit, käynnissä) ja kerros 5 (React-UI).
 
 ## Mitä tämä on
 Faktatutka arvioi syötetyn uutistekstin tai väitteen uskottavuutta
@@ -562,5 +562,59 @@ ja joita kerros 4 on toistaiseksi vaille jäänyt:
   negatiiviseksi, ja testi epäonnistui odotetusti (epärelevantit
   nollapisteiset osumat livahtivat läpi) — testi ei ole vain olemassa,
   se oikeasti valvoo kynnystä.
+
+### Väärä osuma korjattu (4.8:n jälkeen, oikealla datalla todennettu)
+
+Heti kun 4.8:n testit ajettiin OIKEALLA 208 artikkelin korpuksella (ei
+pelkällä pienellä testikorpuksella), yksi niistä kaatui:
+`test_analyze_endpoint_sources_empty_for_unrelated_claim` sai väitteelle
+"Marsissa asuu vihreitä pikku-ukkoja" kolme ei-tyhjää lähdettä, mukaan
+lukien pisteen 5.27 artikkelille joka käsittelee maahanmuuttopolitiikkaa —
+ei Marsia.
+
+**Syy, diagnosoitu erillisellä kertakäyttöskriptillä ennen korjausta**
+(ei arvattu): molemmat vääristä osumista selittyivät YHDEN sanan
+kirjaimellisella osumalla — "asuu" (pisteen 5.27 artikkelissa) tai
+"vihreitä" (pisteen 4.54 artikkelissa). Nämä ovat täysin tavallista
+suomea, mutta koska koko korpuksessa on vain 208 artikkelia, kumpikin
+sana esiintyy sattumalta vain 4/208 artikkelissa — ja BM25:n IDF-termi
+nostaa harvinaisten sanojen painoarvon korkeaksi RIIPPUMATTA siitä onko
+sana aiheen kannalta merkitsevä vai ei. Pelkkä pistekynnys
+(`RAG_MIN_SCORE`) ei erota "yksi sattumasana osuu" tilannetta "useampi
+aiheeseen liittyvä sana osuu" -tilanteesta.
+
+**Miksi pistekynnyksen nosto ei olisi ollut turvallinen korjaus:** väärät
+osumat (5.27, 4.54) olivat liian lähellä aidon yksisanaisen kyselyn
+pistettä (4.3:n "koronarokote"-testi: 6.59). Mikä tahansa uusi kynnysarvo
+niiden välissä olisi ollut yhtä arvattu kuin alkuperäinen 1.0 — ei
+oikea korjaus, vaan uusi versio samasta ongelmasta.
+
+**Toteutettu korjaus** `retrieve_sources()`-funktiossa (`main.py`): osuma
+hyväksytään vain, jos se läpäisee KAKSI erillistä suodatinta — entinen
+pistekynnys JA uusi vaatimus, että osuma perustuu vähintään kahteen eri
+kyselysanaan (lyhyemmälle kyselylle, esim. yksi sana, vaaditaan kaikki
+sen sanat). Tämä poistaa juuri sen virheluokan — yksi sattumalta
+harvinainen mutta merkityksetön sana ei enää riitä — vaikuttamatta
+aitoihin monisanaisiin osumiin ("EU budjetti", "Nato Suomi").
+
+Korjaus todennettu kahdella tasolla:
+- Sandbox-mutaatiotesti: lisättiin oikeaa bugia toisintava
+  regressiotesti pienemmällä testikorpuksella, varmistettiin se
+  vihreäksi, poistettiin korjaus tilapäisesti ja varmistettiin testin
+  kaatuvan odotetusti (score 1.23 läpäisi vanhan kynnyksen), palautettiin
+  korjaus.
+- `tests/test_analyze.py`:hen lisättiin pysyvä regressiotesti
+  (`test_analyze_endpoint_filters_single_incidental_token_match`) joka
+  ajaa saman "Marsissa asuu vihreitä pikku-ukkoja" -väitteen OIKEAA
+  208 artikkelin korpusta vasten — kaikki 20 testiä vihreitä.
+
+Sivuhuomio saman korjauksen yhteydessä: `pytest tests/` kaatui
+`ModuleNotFoundError: No module named 'rag'` -virheeseen keräysvaiheessa,
+koska `tests/test_rag.py` tuo `rag.index`-moduulin suoraan ja pelkkä
+`pytest`-komento ei lisää projektin juurta Python-polulle (`python -m
+pytest` lisää, koska `-m` tekee sen automaattisesti — tämä eroavaisuus
+paljastui vasta kun komentoa ajettiin eri muodossa). Korjattu pysyvästi
+lisäämällä `pytest.ini`, jossa `pythonpath = .` — testit toimivat nyt
+samoin ajotavasta riippumatta.
 
 (täydentyy kerros kerrallaan)
