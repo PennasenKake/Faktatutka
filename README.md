@@ -516,4 +516,51 @@ aihepiiriltään väärä, ja pistemäärä erottaa sen selvästi täsmäosumast
 Yksinkertainen tokenisointi (ei lemmatisointia) riittää siis ensimmäiseen
 versioon oikealla datalla — sanavartalointikorjausta ei tarvita vielä.
 
+### Haun yhdistäminen /analyze-endpointiin (4.6, 4.7 — todennettu)
+
+`main.py` lataa BM25-indeksin käynnistyksessä samaan tapaan kuin ML-baselinen
+(kerran, ei joka pyynnöllä). Jos `rag/bm25_index.pkl`-tiedostoa ei löydy,
+palvelin käynnistyy siitä huolimatta — degradoituu rehellisesti kerroksen 3
+tilaan (ei lähteitä), ei kaada koko käynnistystä yhden puuttuvan tiedoston
+takia. Todennettu suoraan: indeksi poistettiin tilapäisesti, `main.py` latautui
+ja `retrieve_sources()` palautti tyhjän listan kaatumatta.
+
+**`/analyze`-vastaukseen lisättiin `sources`-kenttä** (lista `{title, url,
+score}`-olioita, tyhjä lista on kelvollinen tulos). `call_llm()` hakee
+lähteet (`retrieve_sources()`) ja liittää ne promptiin uutena `<LÄHTEET>`-
+tagina — `SYSTEM_PROMPT`iin lisättiin eksplisiittinen ohje: jos lähteitä
+löytyi, käytä NIMENOMAAN niitä eikä omaa taustatietoa; jos ei löytynyt,
+sano se suoraan ja käytä omaa tietoa kuten ennen kerrosta 4. Tämä korvaa
+kerroksen 3 aiemman, nyt osittain vanhentuneen ohjeen "sinulla ei ole
+pääsyä lähteisiin" — kerroksella 4 on, osittain.
+
+**BM25-pisteen kynnys (`RAG_MIN_SCORE = 1.0`) on käsin valittu heuristiikka,
+ei tilastollisesti johdettu raja.** Perustuu 4.3:n oikeisiin tuloksiin
+(relevantit osumat 2.6–9.9, epärelevantit 0.00) — tarkoitus on hylätä varma
+kohina, ei kalibroida tarkasti. Dokumentoitu koodissa näkyvästi, jotta
+seuraava säätö (jos 4.8:n testit paljastavat tämän väärtäväksi) tietää
+mistä luku on peräisin.
+
+### Automaattitestit RAG-kerrokselle (4.8 toteutettu pytest-testeinä)
+
+Tehtävälista ehdotti 4.8:aa manuaalisena käsintestauksena (kaksi ääripäätä
+curlilla/PowerShellillä). Toteutettu sen sijaan pysyvinä pytest-testeinä —
+samaan tapaan kuin kerrokset 1–3, joilla oli automaattitestit alusta asti,
+ja joita kerros 4 on toistaiseksi vaille jäänyt:
+
+- `tests/test_rag.py` (2 testiä): testaa `rag/index.py`:n BM25-mekaniikan
+  suoraan oikeaa 208 artikkelin indeksiä vasten — relevantti kysely nostaa
+  pistemäärän yli nollan, epärelevantti pysyy nollassa.
+- `tests/test_analyze.py`:hen lisättiin 2 uutta testiä jotka mockaavat
+  VAIN `ollama.generate()`:n (ei koko `call_llm()`:ia) — `retrieve_sources()`
+  ajaa siis aidosti. Yksi todistaa että tunnettu väite (esim. Nato-jäsenyys)
+  tuottaa ei-tyhjän `sources`-listan, toinen että täysin aiheeseen
+  liittymätön väite (testattu: "Marsissa asuu vihreitä pikku-ukkoja")
+  tuottaa tyhjän listan — ei keksittyä lähdettä.
+- Mutaatiotestillä varmistettu ennen toimitusta että jälkimmäinen testi
+  oikeasti havaitsee virheen: `RAG_MIN_SCORE` laskettiin tilapäisesti
+  negatiiviseksi, ja testi epäonnistui odotetusti (epärelevantit
+  nollapisteiset osumat livahtivat läpi) — testi ei ole vain olemassa,
+  se oikeasti valvoo kynnystä.
+
 (täydentyy kerros kerrallaan)
