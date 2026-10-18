@@ -9,3 +9,4 @@ __pycache__/
 .idea/
 .pytest_cache/
 faktabaari_corpus.json
+rag/bm25_index.pkl
