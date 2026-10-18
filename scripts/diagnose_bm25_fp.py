@@ -8,12 +8,19 @@
 # takaisin.
 import json
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 
-from rag.index import load_index, search, tokenize
+# Tämä skripti asuu scripts/-kansiossa, ei projektin juuressa — ROOT pitää
+# siis laskea KAHDEN tason päähän (scripts/ -> juuri), ei yhden, ja
+# juurikansio on lisättävä sys.pathille ETTÄ "from rag.index import ..."
+# löytää rag-paketin ylipäätään (python lisää automaattisesti vain
+# TÄMÄN tiedoston oman kansion, scripts/, ei juurikansiota).
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
-ROOT = Path(__file__).resolve().parent  # aja tama faktatutka-kansiosta
+from rag.index import load_index, search, tokenize  # noqa: E402  (polku pitää lisätä ensin)
 
 QUERY = "Marsissa asuu vihreitä pikku-ukkoja"
 query_tokens = tokenize(QUERY)
