@@ -4,7 +4,7 @@
 > epävarmuudella ja näkyvillä lähteillä. Ei tuomiota, vaan tutka.
 
 ## Tila
-Kehitteillä — kerrokset 1–3 valmiit (baseline ML, pytest-testit, LLM-arvio). Kerros 4/7 (RAG) käynnissä: lähdestrategia, korpus (208 artikkelia), BM25-hakuindeksi ja haun yhdistäminen /analyze-endpointiin valmiit ja todennettu (4.1–4.3, 4.6–4.8), mukaan lukien oikealta datalta löytynyt ja korjattu väärä-osuma-bugi (ks. alla). Seuraavaksi: 4.9 (commit, käynnissä) ja kerros 5 (React-UI).
+Kehitteillä — kerrokset 1–4 valmiit (baseline ML, pytest-testit, LLM-arvio, RAG-lähdehaku BM25:llä, mukaan lukien oikealta datalta löytynyt ja korjattu väärä-osuma-bugi, ks. alla). Kerros 5 (React-UI) aloitettu: `frontend/`-kansiossa Vite+React-skaffoldi (JavaScript), ajettava (`npm run build` onnistuu) — ei vielä yhtään Faktatutka-spesifistä komponenttia tai API-kutsua. Tunnettu, dokumentoitu rajoitus RAG:ssa: "lähde löytyi" ei tarkoita "lähde tukee juuri tätä väitettä" (ks. alla).
 
 ## Mitä tämä on
 Faktatutka arvioi syötetyn uutistekstin tai väitteen uskottavuutta
@@ -16,8 +16,8 @@ näyttää mihin se perustuu.
 - [X] 1. Baseline (TF-IDF + logistinen regressio)
 - [X] 2. Testit (pytest)
 - [X] 3. LLM-arvio (Ollama)
-- [ ] 4. RAG (lähdehaku)
-- [ ] 5. Käyttöliittymä (React)
+- [X] 4. RAG (lähdehaku)
+- [ ] 5. Käyttöliittymä (React) — aloitettu, frontend/-skaffoldi luotu
 - [ ] 6. Docker
 - [ ] 7. Selainlaajennus (valinnainen)
 

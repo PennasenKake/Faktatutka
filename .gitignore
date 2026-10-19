@@ -10,3 +10,5 @@ __pycache__/
 .pytest_cache/
 faktabaari_corpus.json
 rag/bm25_index.pkl
+
+# frontend (kerros 5, React + Vite) - oma .gitignore frontend/-kansiossa
