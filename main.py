@@ -46,6 +46,40 @@ def ml_baseline_score(text: str) -> tuple[int, int]:
     return score, vocab_hits
 
 
+# ============================================================
+# KERROS 4 — RAG (Retrieval-Augmented Generation): KOKO PUTKI YHDELLÄ SILMÄYKSELLÄ
+# ============================================================
+# Tarkoitus: LLM (kerros 3) ei tiedä tuoreita tai suomenkielisiä
+# erikoistapauksia luotettavasti (ks. README: toistuva Nato-jäsenyys-
+# havainto). RAG hakee ENNEN LLM-kutsua Faktabaari.fi:n faktantarkistus-
+# arkistosta (208 artikkelia, kerätty erillisellä
+# scripts/faktabaari_scraper.py:llä) väitteeseen liittyviä otteita ja
+# antaa ne LLM:lle kontekstina sen OMAN tiedon LISÄKSI — ei sen tilalle.
+#
+# Putki, askel askeleelta joka ikinen /analyze-pyyntö käy läpi:
+#   1. retrieve_sources(claim)    — hakee BM25:llä parhaat osumat
+#      (rag/index.py:n search()), suodattaa pois epävarmat/sattumalta
+#      osuneet (ks. RAG_MIN_SCORE/RAG_MIN_TOKEN_OVERLAP-kommentit alla).
+#   2. build_rag_context(sources) — muotoilee löydetyt (tai ei-löydetyt)
+#      lähteet <LÄHTEET>-tagin sisällöksi promptiin.
+#   3. call_llm()                 — yhdistää tämän ML-baselinen
+#      pisteeseen, antaa molemmat LLM:lle SYSTEM_PROMPTin ohjaamana
+#      (alla) — LLM itse päättää kuinka paljon painoa lähteille antaa,
+#      koodi ei pakota kiinteää kaavaa (ks. avoin kysymys 2).
+#   4. /analyze palauttaa sources-listan käyttäjälle SELLAISENAAN, jotta
+#      näkee mihin arvio perustuu — tyhjä lista on kelvollinen,
+#      rehellinen vastaus, ei virhe.
+#
+# TUNNETTU RAJOITUS (ei vielä korjattu, dokumentoitu tietoisesti):
+# "lähde löytyi" tarkoittaa tässä PUTKESSA vain, että BM25 löysi
+# tekstillisesti samaan aihepiiriin liittyvän artikkelin. Se EI
+# tarkoita, että artikkeli on todennettu tukevan tai kumoavan juuri
+# käyttäjän täsmällistä väitettä — sen päättelyn tekee (tai ei tee)
+# LLM lukemalla otteen SYSTEM_PROMPTin ohjeen mukaan, koodi ei pakota
+# sitä rakenteellisesti. Ks. README "Tunnettu rajoitus: lähde löytyi
+# ≠ lähde tukee väitettä".
+# ============================================================
+
 # ---- RAG-hakuindeksi (kerros 4, askel 4.6/4.7) ladataan KERRAN
 # käynnistyksessä, samaan tapaan kuin ML-baseline yllä. Jos indeksiä ei
 # löydy (esim. rag/index.py ei ole ajettu tällä koneella), /analyze

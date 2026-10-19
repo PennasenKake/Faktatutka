@@ -798,4 +798,44 @@ paljastui vasta kun komentoa ajettiin eri muodossa). Korjattu pysyvästi
 lisäämällä `pytest.ini`, jossa `pythonpath = .` — testit toimivat nyt
 samoin ajotavasta riippumatta.
 
+### Tunnettu rajoitus: lähde löytyi ≠ lähde tukee väitettä
+
+RAG-haku (`retrieve_sources()`, `main.py`) palauttaa artikkeleita jotka
+ovat BM25:n mukaan **tekstillisesti samaa aihepiiriä** käyttäjän
+väitteen kanssa. Se ei ole sama asia kuin että artikkeli olisi
+todennettu **tukevan tai kumoavan juuri tätä täsmällistä väitettä**.
+
+Konkreettinen esimerkki: korpuksessa on artikkeli "Alexander Stubb:
+Yhteenkään Nato-maahan ei ole hyökätty". Jos käyttäjä syöttää väitteen
+"Nato on hyökännyt Venäjälle", BM25 saattaa palauttaa tämän artikkelin
+lähteeksi — sanat "Nato" ja "hyökätty" osuvat — vaikka artikkeli ei
+käsittele tätä väitettä mitenkään, ja tosiasiassa väittää asiasta
+täyspäinvastaista tapausta (ei kumpaakaan suuntaan hyökätty).
+
+Tämän erottelun tekee tällä hetkellä SYSTEM_PROMPT ja LLM:n oma
+lukutaito, ei koodin pakottama rakenne: `Source`-malissa ei ole kenttää
+sille onko lähde "tukeva", "ristiriitainen" vai "ei riitä näyttöä" —
+vain title/url/score. LLM:ää ohjeistetaan käyttämään otteita
+"arvion perustana", mutta mikään ei estä sitä viittaamaan lähteeseen
+[1] vaikka ote ei todellisuudessa ota kantaa väitteeseen.
+
+Tämä ei ole kerroksen 4 "valmis kun" -kriteerin rikkomus (kriteeri oli
+"sources palautuu, tyhjä tila toimii rehellisesti" — molemmat pitävät
+paikkansa). Se on seuraava, tarkempi kysymys, joka jätetään tietoisesti
+auki: suunniteltu ratkaistavaksi kerroksen 8 (evaluointi/kalibrointi)
+yhteydessä, kun joka tapauksessa rakennetaan käsin arvioitua
+testiaineistoa — siihen on luonnollista lisätä myös lähteen kannan
+luokittelu, ei vain lopullisen pisteen tarkkuus. Ks.
+`docs/kerros8-eval-seed.md`.
+
+### Kerroksen 8 eval-aineiston siemen (muistiinpano, ei käytössä)
+
+`docs/kerros8-eval-seed.md` sisältää 12 esimerkkiväitettä, jokaiselle
+käsin arvioidun odotetun luokan ja odotetun RAG-lähdetilanteen.
+Esimerkit on poimittu OIKEASTA 208 artikkelin korpuksesta (todelliset
+Faktabaari-otsikot), jotta aineisto on käyttökelpoinen kun kerros 8
+alkaa — ei vielä ajettu koodia vasten, ei osa testisuitea. Tarkoitus on
+välttää tilanne jossa evaluointimittarit keksitään jälkikäteen sen
+mukaan mitä sattuu toimimaan.
+
 (täydentyy kerros kerrallaan)
