@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 import joblib
@@ -307,6 +308,19 @@ def call_llm(claim: str, max_retries: int = 1) -> LLMResult:
             options={
                 "temperature": 0.2,
                 "num_predict": 200,
+                # KORJATTU (ks. README "num_ctx-korjaus"): Ollaman oletusarvo
+                # num_ctx:lle on monissa versioissa vain 2048 tokenia, JAETTU
+                # system-promptin + <KONTEKSTI>-tagin + <LÄHTEET>-tagin (3 x
+                # RAG_SNIPPET_CHARS) + itse <VÄITE>-tagin kesken. Kokonaisen
+                # liitetyn uutisartikkelin (helposti 2000-4000 tokenia
+                # suomeksi) olisi voinut KATKETA HILJAA tähän rajaan - ei
+                # virhettä, malli olisi vain nähnyt vain alun artikkelista.
+                # 8192 antaa reilusti tilaa system-promptille + 3 lähteelle
+                # + ~5000 sanan artikkelille ilman että pitää arvioida tarkkaa
+                # tokenimäärää per pyyntö. Ei mitattu tarkkaa ylärajaa missä
+                # tämäkin alkaisi katketa - jos käyttäjä liittää poikkeuksellisen
+                # pitkän tekstin, se on silti mahdollista jatkossakin.
+                "num_ctx": 8192,
             },
             stream=False,
         )
@@ -341,6 +355,25 @@ def call_llm(claim: str, max_retries: int = 1) -> LLMResult:
 # ---- FastAPI-sovellus: yksi /analyze-endpoint ----
 
 app = FastAPI(default_response_class=UTF8JSONResponse)
+
+# ---- CORS (kerros 5 -valmistelu) ----
+# Ympäristömuuttuja, ei kovakoodattu localhost:5173 - sama periaate kuin
+# OLLAMA_MODEL:lla. Pilkulla eroteltu lista sallittuja origineja.
+# Kehityksessä frontend ja backend ovat AINA erilliset palvelut (React-
+# devserveri eri portissa kuin FastAPI), joten CORS tarvitaan jo kehitys-
+# vaiheessa, ei vasta tuotannossa. Tuotannossa kaksi vaihtoehtoa jää auki:
+# FastAPI tarjoilee buildatun Reactin StaticFilesilla (CORS-origin voisi
+# olla sama origin eikä sitä tarvittaisi lainkaan), tai frontend/backend
+# pysyvät erillisinä palveluina myös tuotannossa (CORS tarvitaan silloinkin,
+# arvo vaihtuu ympäristömuuttujan kautta oikeaan domainiin). Kumpaakaan ei
+# ole lyöty lukkoon - ks. README.
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in _cors_origins if o.strip()],
+    allow_methods=["POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 @app.post("/analyze", response_model=LLMResult)

@@ -501,7 +501,7 @@ väitteen puolesta, vain puuttuvaa näyttöä sitä vastaan.
 tarkistuslistan kohta suoraan itse `/analyze`-endpointia vasten, ei vain
 erillisskripteillä.**
 
-## RAG (kerros 4, alkamassa)
+## RAG (kerros 4, valmis)
 
 ### Lähdestrategia (4.1)
 Tehtävälistan oma oletus oli "kuratoitu korpus ensin (FEVER + Faktabaari),
@@ -798,6 +798,27 @@ paljastui vasta kun komentoa ajettiin eri muodossa). Korjattu pysyvästi
 lisäämällä `pytest.ini`, jossa `pythonpath = .` — testit toimivat nyt
 samoin ajotavasta riippumatta.
 
+### num_ctx-korjaus (löydetty kerroksen 5 suunnittelun yhteydessä)
+
+Kun suunniteltiin käyttöliittymän "liitä koko artikkeli ctrl+A:lla"
+-käyttötapausta, huomattiin ettei Ollama-kutsun `options`-sanakirjassa
+ollut koskaan asetettu `num_ctx`-arvoa. Ollaman oletusarvo on monissa
+versioissa vain 2048 tokenia, jaettuna system-promptin + `<KONTEKSTI>`-
+tagin + `<LÄHTEET>`-tagin (3 lähdettä x `RAG_SNIPPET_CHARS`) + itse
+`<VÄITE>`-tagin kesken. Kokonainen liitetty uutisartikkeli (helposti
+2000–4000 tokenia suomeksi) olisi voinut **katketa hiljaa** tähän
+rajaan — ei virhettä, malli olisi vain arvioinut alun artikkelista
+tietämättä itsekään että loppu puuttui.
+
+Tätä ei löydetty testeillä, koska kaikki tähänastiset testiväitteet
+ovat olleet lyhyitä — sama "testataan vain pienellä/kätevällä
+syötteellä" -virhe kuin BM25-väärässä osumassa (ks. yllä), eri
+muodossa. Korjattu lisäämällä `"num_ctx": 8192` options-sanakirjaan
+(`main.py`) — reilusti tilaa system-promptille, kolmelle lähteelle ja
+pitkälle artikkelille ilman tarkkaa tokenilaskentaa joka pyynnöllä.
+Ei mitattu tarkkaa ylärajaa missä tämäkin alkaisi katketa — poikkeuksel-
+lisen pitkä teksti voi silti olla riski jatkossa.
+
 ### Tunnettu rajoitus: lähde löytyi ≠ lähde tukee väitettä
 
 RAG-haku (`retrieve_sources()`, `main.py`) palauttaa artikkeleita jotka
@@ -837,5 +858,61 @@ Faktabaari-otsikot), jotta aineisto on käyttökelpoinen kun kerros 8
 alkaa — ei vielä ajettu koodia vasten, ei osa testisuitea. Tarkoitus on
 välttää tilanne jossa evaluointimittarit keksitään jälkikäteen sen
 mukaan mitä sattuu toimimaan.
+
+Täydennetty FEVER-datasetin (englanninkielinen väitetutkimusaineisto)
+kolmiluokkaisella TUKEE/KUMOAA/EI RIITÄ NÄYTTÖÄ -rakenteella — ei
+FEVER:n dataa (ei sovi suomeksi, ks. 4.1), vaan sen koeteltu luokittelu-
+rakenne lainattuna jokaiselle esimerkille valmiiksi käsin arvioituna.
+Tarkoitus: kun `Source`-malliin joskus lisätään `stance`-kenttä, sillä
+on heti tätä vasten vertailtava käsin arvioitu joukko, eikä testitapauksia
+tarvitse keksiä vasta siinä vaiheessa.
+
+## Käyttöliittymä (kerros 5, aloitettu)
+
+### Hakemistorakenne ja CORS/tarjoilumallipäätös
+
+`frontend/`-kansio (Vite + React, JavaScript — ei TypeScript, tietoinen
+valinta) samassa repossa, ei erillisessä — yksi GitHub-linkki, ei
+ylimääräistä ylläpidettävää. Skaffoldi varmistettu ajettavaksi
+(`npm install` + `npm run build`) ennen committia, ei vielä yhtään
+Faktatutka-spesifistä komponenttia.
+
+CORS ja tarjoilumalli päätetty ENNEN ensimmäistä fetch-kutsua, ei sen
+jälkeen kun selain heittäisi CORS-virheen:
+
+- **CORS-origin on ympäristömuuttuja** (`CORS_ORIGINS`, pilkulla
+  eroteltu lista, oletus `http://localhost:5173`) — sama periaate kuin
+  `OLLAMA_MODEL`:lla, ei kovakoodattu `main.py`:hen (`fastapi.middleware.cors.CORSMiddleware`).
+- **Kehityksessä frontend ja backend ovat AINA erilliset palvelut**
+  (React-devserveri eri portissa kuin FastAPI) — CORS tarvitaan siis
+  jo kehitysvaiheessa, ei vasta tuotannossa.
+- **Tuotannon tarjoilumalli jätetään TIETOISESTI auki**, ei lukkoon
+  lyöty: joko FastAPI tarjoilee buildatun Reactin `StaticFiles`illa
+  (jolloin CORS-origin voisi tuotannossa olla sama origin eikä sitä
+  tarvittaisi lainkaan), tai frontend/backend pysyvät erillisinä
+  palveluina myös tuotannossa (CORS tarvitaan silloinkin, arvo
+  vaihtuu ympäristömuuttujan kautta oikeaan domainiin). Tämä päätös
+  vaikuttaa kerroksen 6 (Docker) rakenteeseen, mutta ei tarvitse
+  ratkaisua vielä kerroksessa 5.
+
+### UI-suunnitelma mockupista
+
+Alustava UI-mockup (ks. erillinen julkaistu suunnitteluartefakti)
+sisälsi useita ominaisuuksia jotka EIVÄT päädy kerrokseen 5
+sellaisenaan: URL-syöte (ks. yllä "URL-tuki ei MVP:ssä" -päätös),
+kiinteät prosenttiosuudet ML/LLM/RAG-painotukselle (ei vastaa koodia —
+yhdistäminen on LLM:n oma päätös, ei kiinteä kaava, ks. avoin kysymys
+2), lähteen tuki/luotettavuus-tagit (ei olemassa `Source`-mallissa,
+ks. "Tunnettu rajoitus" yllä), analyysihistoria, jakaminen/tallennus,
+selainlaajennus (kerros 7) ja natiivi mobiilisovellus (ei missään
+kerroksessa). Kerrokseen 5 päätyy vain: tekstisyöte, lataustila, ja
+tulos SAMASSA näkymässä (ei erillisiä reittejä) — score-gauge,
+label suoraan `label_from_score()`:n palauttamana (ei frontendissä
+uudelleenlaskettuna), ML-läpinäkyvyys, lähdelista (enintään 3,
+rehellinen tyhjä tila) ja kalibrointimuistutus.
+
+### Repo
+
+Julkinen: [github.com/PennasenKake/Faktatutka](https://github.com/PennasenKake/Faktatutka).
 
 (täydentyy kerros kerrallaan)
