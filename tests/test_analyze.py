@@ -176,3 +176,67 @@ def test_analyze_endpoint_filters_single_incidental_token_match(mock_generate, c
         f"odotettiin tyhjaa listaa, saatiin {sources} - jos tämä palaa, "
         "RAG_MIN_TOKEN_OVERLAP-suodatin ei enää toimi oikealla korpuksella"
     )
+
+
+
+# ---- Regressiotestit kahdelle äskettäin korjatulle/lisätylle asialle
+# (ks. README: "num_ctx-korjaus" ja "Käyttöliittymä, kerros 5"). Kumpikaan
+# ei ollut minkään olemassa olevan testin piirissä aiemmin - py_compile
+# ja mockattu "ei kaadu" -testi eivät olisi huomanneet kumpaakaan
+# regressiota, koska kumpikaan ei kaada sovellusta, se vain käyttäytyy
+# väärin hiljaisesti.
+
+@patch("main.ollama.generate")
+def test_analyze_endpoint_sets_num_ctx_to_avoid_silent_truncation(mock_generate, client):
+    """num_ctx puuttui aiemmin kokonaan options-sanakirjasta - Ollaman
+    oletusarvo (usein 2048 tokenia) olisi voinut katkaista pitkän
+    liitetyn artikkelin hiljaa, ilman virhettä. Tämä testi ei todista
+    että 8192 on oikea/riittävä arvo millekään syötteelle - se
+    varmistaa vain ettei arvo ole enää kokonaan asettamatta, mikä oli
+    itse puute."""
+    mock_generate.return_value = _fake_ollama_response()
+
+    client.post("/analyze", json={"text": "jokin väite"})
+
+    passed_options = mock_generate.call_args.kwargs["options"]
+    assert passed_options.get("num_ctx") == 8192, (
+        "num_ctx puuttuu tai on muuttunut - pitkä liitetty artikkeli voi "
+        "taas katketa hiljaa Ollaman kontekstirajaan"
+    )
+
+
+@patch("main.ollama.generate")
+def test_cors_allows_configured_dev_origin(mock_generate, client):
+    """CORS_ORIGINS-ympäristömuuttujan oletusarvo (http://localhost:5173,
+    React-devserverin oletusportti) saa Access-Control-Allow-Origin
+    -headerin takaisin - varmistaa että CORSMiddleware on oikeasti
+    kytketty, ei vain lisätty koodiin ilman vaikutusta."""
+    mock_generate.return_value = _fake_ollama_response()
+
+    response = client.post(
+        "/analyze",
+        json={"text": "jokin väite"},
+        headers={"Origin": "http://localhost:5173"},
+    )
+
+    assert (
+        response.headers.get("access-control-allow-origin")
+        == "http://localhost:5173"
+    )
+
+
+@patch("main.ollama.generate")
+def test_cors_rejects_unconfigured_origin(mock_generate, client):
+    """Negatiivinen pari edelliselle: origin jota CORS_ORIGINS ei
+    listaa EI saa Access-Control-Allow-Origin-headeria - varmistaa
+    ettei middleware salli kaikkea (ei wildcard "*"), vain nimetyt
+    originit."""
+    mock_generate.return_value = _fake_ollama_response()
+
+    response = client.post(
+        "/analyze",
+        json={"text": "jokin väite"},
+        headers={"Origin": "https://jokin-tuntematon-sivusto.fi"},
+    )
+
+    assert "access-control-allow-origin" not in response.headers
