@@ -895,6 +895,39 @@ jälkeen kun selain heittäisi CORS-virheen:
   vaikuttaa kerroksen 6 (Docker) rakenteeseen, mutta ei tarvitse
   ratkaisua vielä kerroksessa 5.
 
+### Testikattavuus: CORS ja num_ctx (5 uutta testiä, 20 → 25 yhteensä)
+
+Teknisen velan korjauksen (num_ctx, CORS) yhteydessä lisättiin 3
+regressiotestiä `tests/test_analyze.py`:hen:
+`test_analyze_endpoint_sets_num_ctx_to_avoid_silent_truncation`,
+`test_cors_allows_configured_dev_origin`,
+`test_cors_rejects_unconfigured_origin`. Itsekriittinen jälkitarkistus
+("ovatko riittävät?") löysi näistä kolmesta kaksi aukkoa — molemmat
+korjattu heti lisäämällä kaksi uutta testiä:
+
+- Kaksi ensimmäistä CORS-testiä testasivat vain Starletten "simple
+  response" -polkua (suora POST + Origin-header) — eivät oikeaa
+  selaimen OPTIONS-preflight-mekanismia, joka tarkistaa metodin ja
+  headerit erikseen omassa koodihaarassaan
+  (`CORSMiddleware.preflight_response()`). Lisätty
+  `test_cors_preflight_response_for_configured_origin`, joka lähettää
+  oikean preflight-pyynnön (`Access-Control-Request-Method`/-`Headers`).
+- num_ctx-testi käytti lyhyttä "jokin väite" -tekstiä, joka ei koskaan
+  kulkenut `build_rag_context()`/`user_prompt`-koonnin läpi
+  realistisella pituudella. Lisätty
+  `test_analyze_endpoint_handles_full_length_article_without_crashing`,
+  joka liittää ~6000 merkin väitteen ja varmistaa ettei koodi itse
+  katkaise sitä ennen Ollama-kutsua.
+
+Kolmas löydetty aukko jätetty TIETOISESTI korjaamatta:
+`CORS_ORIGINS`-ympäristömuuttujan arvo luetaan `os.getenv(...)`:lla
+moduulin tuontihetkellä, ja `tests/conftest.py`:n `client`-fixture on
+`session`-scopattu (tuo `main`-moduulin kerran koko testiajolle) —
+näiden yhdistelmä tekee eri `CORS_ORIGINS`-arvojen testaamisesta
+mahdotonta juuri nyt. Korjaus vaatisi app-factory-rakenteen tai
+`importlib.reload`-pohjaisen testin — isompi muutos, ei tehty tässä,
+koska ei ollut osa hyväksyttyä korjauslistaa.
+
 ### UI-suunnitelma mockupista
 
 Alustava UI-mockup (ks. erillinen julkaistu suunnitteluartefakti)

@@ -240,3 +240,73 @@ def test_cors_rejects_unconfigured_origin(mock_generate, client):
     )
 
     assert "access-control-allow-origin" not in response.headers
+
+
+# ---- Kaksi lisätestiä, jotka paikkaavat yllä olevien CORS/num_ctx-
+# testien tunnetut aukot (ks. README "Testien riittävyys" -huomio):
+# edelliset CORS-testit todistavat vain Starletten "simple response"
+# -polun (suora POST + Origin-header), eivät oikeaa selaimen preflight-
+# mekanismia; ja num_ctx-testi käyttää lyhyttä tekstiä, joka ei koskaan
+# kulje build_rag_context()/user_prompt-koonnin läpi realistisella
+# pituudella. Molemmat ovat halpoja lisätä nyt - ei arkkitehtuurimuutosta.
+
+@patch("main.ollama.generate")
+def test_cors_preflight_response_for_configured_origin(mock_generate, client):
+    """Edelliset kaksi CORS-testiä lähettävät suoraan POST-pyynnön Origin-
+    headerin kanssa - se on CORSMiddlewaren "simple response" -polku,
+    joka tarkistaa VAIN originin, ei metodia tai headereita. Oikea selain
+    lähettää ensin erillisen OPTIONS-preflight-pyynnön (Access-Control-
+    Request-Method/-Headers), joka kulkee CORSMiddlewaren ERI haaran
+    (preflight_response()) läpi - se ei koskaan edes saavuta /analyze-
+    reittiä itse. Tämä testi ei kutsu ollama.generate:ä - preflight-
+    vastaus syntyy middlewaressa, LLM:ää ei tarvita. mock_generate on
+    mukana vain koska @patch-dekoraattori pysyy yhtenäisenä tiedoston
+    muiden testien kanssa; assert_not_called() varmistaa että oletus
+    pitää."""
+    response = client.options(
+        "/analyze",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200, (
+        "preflight epäonnistui - CORS_ORIGINS, allow_methods tai "
+        "allow_headers ei enää täsmää selaimen lähettämään pyyntöön"
+    )
+    assert (
+        response.headers.get("access-control-allow-origin")
+        == "http://localhost:5173"
+    )
+    assert "POST" in response.headers.get("access-control-allow-methods", "")
+    mock_generate.assert_not_called()
+
+
+@patch("main.ollama.generate")
+def test_analyze_endpoint_handles_full_length_article_without_crashing(
+    mock_generate, client
+):
+    """num_ctx-testi yllä käyttää lyhyttä "jokin väite" -tekstiä - se
+    todistaa VAIN että options-sanakirja sisältää num_ctx:n, ei että
+    pitkä teksti oikeasti kulkee ehjänä build_rag_context()/user_prompt-
+    koonnin läpi asti ollama.generate-kutsuun asti. Tämä testi liittää
+    oikean mittaisen (~6000 merkkiä, vastaa pitkää uutisartikkelia)
+    väitteen ja varmistaa ettei RAG-kontekstin rakennus tai promptin
+    koonti kaada pyyntöä tai katkaise väitettä ITSE koodissamme.
+    Ollaman omaa num_ctx-rajaa (katkaiseeko se 8192 tokenin kohdalla)
+    ei voi todistaa mockatulla kutsulla - se vaatisi oikean Ollama-
+    kutsun, ks. README "num_ctx-korjaus"."""
+    mock_generate.return_value = _fake_ollama_response()
+    long_claim = "Hallitus aikoo nostaa polttoaineveroa ensi vuonna. " * 120
+
+    response = client.post("/analyze", json={"text": long_claim})
+
+    assert response.status_code == 200
+    passed_prompt = mock_generate.call_args.kwargs["prompt"]
+    assert long_claim in passed_prompt, (
+        "pitkä väite ei päätynyt kokonaisena LLM:lle annettuun promptiin - "
+        "jokin koodissamme (EI Ollama itse) katkaisi tai muokkasi sitä "
+        "ennen ollama.generate-kutsua"
+    )
