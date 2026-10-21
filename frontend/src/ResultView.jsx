@@ -28,7 +28,7 @@ export default function ResultView({ result }) {
           role="img"
           aria-label={`Uskottavuusarvio ${score} prosenttia`}
         >
-          <circle cx="80" cy="80" r={r} fill="none" stroke="#3a3a3a" strokeWidth="12" />
+          <circle cx="80" cy="80" r={r} fill="none" stroke="#E4E2DC" strokeWidth="12" />
           <circle
             cx="80"
             cy="80"
@@ -41,10 +41,10 @@ export default function ResultView({ result }) {
             strokeDashoffset={dashOffset}
             transform="rotate(-90 80 80)"
           />
-          <text x="80" y="78" textAnchor="middle" fontSize="28" fontWeight="700" fill="#fff">
+          <text x="80" y="78" textAnchor="middle" fontSize="28" fontWeight="700" fill="#1A1A18">
             {score}%
           </text>
-          <text x="80" y="98" textAnchor="middle" fontSize="12" fill="#aaa">
+          <text x="80" y="98" textAnchor="middle" fontSize="12" fill="#5B5B56">
             arvio
           </text>
         </svg>

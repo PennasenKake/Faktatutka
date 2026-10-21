@@ -990,6 +990,23 @@ syötteellä. Tämä on rakenteellisesti sama "lähde löytyi ≠ lähde tukee
 väitettä" -rajoitus kuin yllä, mutta nyt myös pelkkä aihepiiriosuma
 näyttää pettävän pitkällä syötteellä. Ei korjattu — kerroksen 4 asia.
 
+**Päivitys 21.10.2026 — neljäs testi vahvistaa ja terävöittää löydöksen.**
+Neljäs pitkä artikkeli (IS.fi, Ukrainan rauhanneuvottelut, Witkoff/Putin,
+~5300 merkkiä) tuotti BM25-pisteet 464.83 / 383.79 / 382.43 — korkeammat
+kuin kumpikaan aiempi testi (167–182), eli pistemäärä jatkaa kasvuaan
+tekstin pituuden mukana eikä tasaannu. Tällä kertaa palautetut lähteet
+eivät kuitenkaan olleet täysin aiheeseen liittymättömiä kuten aiemmin
+(THL/korona, Facebookin algoritmi) — ne käsittelivät samaa laajaa
+aihepiiriä (Stubb, Zelenskyi ja Trump Ukrainan sodan yhteydessä) mutta
+silti eri väitteitä kuin mitä testiartikkelissa esitettiin (Putinin ja
+Witkoffin Pietarin-tapaaminen, neuvotteluaikataulu marraskuulle). Tämä on
+"lähde löytyi ≠ lähde tukee väitettä" -rajoituksen hienovaraisempi
+muoto: lähteet näyttävät uskottavilta koska aihepiiri osuu kohdalleen,
+mikä tekee ongelmasta vaikeamman huomata käyttöliittymästä kuin silloin
+kun lähteet ovat selvästi vääriä. Vahvistaa sekä diagnoosin
+(kyselyn-pituus-skaalautuminen) että sen, ettei tämä ole yksittäisen
+testiartikkelin erikoistapaus.
+
 Kaikki kolme jäävät avoimiksi kysymyksiksi seuraavaa kerrosten 3/4
 käsittelykierrosta varten. Yhteinen juurisyy kaikille kolmelle: mikään
 aiempi testi (automaattinen tai käsin tehty) ei ole koskaan ajanut koko
