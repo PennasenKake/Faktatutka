@@ -1008,8 +1008,49 @@ kun lähteet ovat selvästi vääriä. Vahvistaa sekä diagnoosin
 (kyselyn-pituus-skaalautuminen) että sen, ettei tämä ole yksittäisen
 testiartikkelin erikoistapaus.
 
-Kaikki kolme jäävät avoimiksi kysymyksiksi seuraavaa kerrosten 3/4
-käsittelykierrosta varten. Yhteinen juurisyy kaikille kolmelle: mikään
+**4. Kielihallusinaatio: selitys väittää englanninkielisen tekstin olevan
+suomea (uusi, viides testi, 21.10.2026).** Viides live-testi käytti
+ensimmäistä kertaa englanninkielistä artikkelia (BBC, "Russia says it
+is ready to resume talks with Ukraine and US to end war", 6265
+merkkiä). ML-baseline tunnisti 286 tunnettua sanaa — korkein luku koko
+testihistoriassa (suomenkielisillä testeillä 0–18) — ja antoi pisteen
+94/100. Selitys siitä huolimatta totesi: "Koneoppimismalli antoi
+tekstille pisteen 94/100, mutta teksti on suomenkielinen, joten se ei
+ole luotettava." Tämä on objektiivisesti väärä väite tekstin kielestä,
+ei tulkintakysymys.
+
+Syy jäljitetty `main.py`:stä, ei satunnainen: sekä `SYSTEM_PROMPT`
+(rivi 151: "se [ML-malli] ei tunne suomenkielisiä sanoja lainkaan,
+joten jos konteksti kertoo vähän tunnettuja sanoja löytyneen, älä anna
+sille juuri mitään painoa") että `context_note` (rivi 292: "Jos
+tunnettuja sanoja on vähän (esim. teksti on suomenkielinen), ML-piste
+ei ole luotettava.") on kirjoitettu olettaen kategorisesti että vähän
+tunnettuja sanoja tarkoittaa suomenkielistä tekstiä, eikä kumpikaan ole
+ehdollinen todellisen `ml_vocab_hits`-arvon suhteen. Malli toisti
+promptin oman esimerkin faktana tarkistamatta oliko ehto edes voimassa
+— 286 tunnettua sanaa ei ole "vähän". Tämä hukkasi käytännössä
+luotettavimman ML-signaalin mitä projektissa on mitattu (englanninkielinen
+malli + englanninkielinen syöte on juuri se tilanne johon ML-baseline on
+koulutettu). Ei korjattu — kerroksen 3 asia.
+
+**Sivulöydös samasta testistä: Faktabaari-korpus ei olekaan täysin
+yksikielinen.** Kaikki kolme palautettua lähdettä (BM25-pisteet
+2362.72 / 2236.47 / 2016.72 — tähänastisen testisarjan korkeimmat,
+selittyy osin siitä että tämä on ensimmäinen testi jossa kysely JA
+korpusosuma ovat samaa kieltä) osoittautuivat tarkistettaessa suoraan
+`faktabaari_corpus.json`:sta oikeiksi, täyspitkiksi englanninkielisiksi
+artikkeleiksi (leipäteksti mukaan lukien, ei vain otsikko). Karkealla
+haulla korpuksesta löytyi ainakin 4/208 englanninkielistä artikkelia;
+yksi niistä ilmoittaa itse olevansa käännös alun perin suomeksi
+julkaistusta jutusta. Aiempi oletus ("kapea, suomenkielinen... korpus",
+ks. 4.1) ei siis ole täysin tarkka — korpus on valtaosin mutta ei
+yksinomaan suomenkielinen. Relevanttia kerrosta 4 koskevaan avoimeen
+kysymykseen englanninkielisestä rinnakkaispolusta (ks. erillinen
+avoimet kysymykset -sivu): pieni määrä oikeaa englanninkielistä
+sisältöä on jo olemassa nykyisessä, muka yksikielisessä putkessa.
+
+Kaikki neljä jäävät avoimiksi kysymyksiksi seuraavaa kerrosten 3/4
+käsittelykierrosta varten. Yhteinen juurisyy kaikille neljälle: mikään
 aiempi testi (automaattinen tai käsin tehty) ei ole koskaan ajanut koko
 putkea oikealla, täysimittaisella artikkelilla ennen kuin kerroksen 5
 käyttöliittymä teki siitä käytännössä mahdollista.
