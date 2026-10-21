@@ -4,7 +4,7 @@
 > epävarmuudella ja näkyvillä lähteillä. Ei tuomiota, vaan tutka.
 
 ## Tila
-Kehitteillä — kerrokset 1–4 valmiit (baseline ML, pytest-testit, LLM-arvio, RAG-lähdehaku BM25:llä, mukaan lukien oikealta datalta löytynyt ja korjattu väärä-osuma-bugi, ks. alla). Kerros 5 (React-UI) aloitettu: `frontend/`-kansiossa Vite+React-skaffoldi (JavaScript), ajettava (`npm run build` onnistuu) — ei vielä yhtään Faktatutka-spesifistä komponenttia tai API-kutsua. Tunnettu, dokumentoitu rajoitus RAG:ssa: "lähde löytyi" ei tarkoita "lähde tukee juuri tätä väitettä" (ks. alla).
+Kehitteillä — kerrokset 1–4 valmiit (baseline ML, pytest-testit, LLM-arvio, RAG-lähdehaku BM25:llä, mukaan lukien oikealta datalta löytynyt ja korjattu väärä-osuma-bugi, ks. alla). Kerros 5 (React-UI) valmis: tekstisyöte, lataustila ja tulosnäkymä (score-gauge, ML-läpinäkyvyys, lähdelista, kalibrointimuistutus) samassa näkymässä, kytketty `/analyze`-endpointiin, testattu sekä lyhyillä väitteillä että täysmittaisilla uutisartikkeleilla (ks. alla kolme live-testauksessa löytynyttä kerros 3/4 -bugia). Tunnettu, dokumentoitu rajoitus RAG:ssa: "lähde löytyi" ei tarkoita "lähde tukee juuri tätä väitettä" (ks. alla).
 
 ## Mitä tämä on
 Faktatutka arvioi syötetyn uutistekstin tai väitteen uskottavuutta
@@ -17,7 +17,7 @@ näyttää mihin se perustuu.
 - [X] 2. Testit (pytest)
 - [X] 3. LLM-arvio (Ollama)
 - [X] 4. RAG (lähdehaku)
-- [ ] 5. Käyttöliittymä (React) — aloitettu, frontend/-skaffoldi luotu
+- [X] 5. Käyttöliittymä (React)
 - [ ] 6. Docker
 - [ ] 7. Selainlaajennus (valinnainen)
 
@@ -555,7 +555,7 @@ ilman erillistä palvelinprosessia, sopii yhden kehittäjän
 projektiin paremmin kuin Qdrant (vaatisi oman palvelimen) tai raaka
 FAISS (matalan tason kirjasto, enemmän itse rakennettavaa).
 
-### Artikkelirakenne ja listauksen haku (4.2, valmisteilla)
+### Artikkelirakenne ja listauksen haku (4.2, valmis)
 
 **Sitemap.xml hylätty enumerointitapana — se on vanhentunut.** 4.1:ssä
 suunniteltiin alun perin käyttää sivuston `sitemap.xml`:ää artikkeli-
@@ -867,15 +867,16 @@ Tarkoitus: kun `Source`-malliin joskus lisätään `stance`-kenttä, sillä
 on heti tätä vasten vertailtava käsin arvioitu joukko, eikä testitapauksia
 tarvitse keksiä vasta siinä vaiheessa.
 
-## Käyttöliittymä (kerros 5, aloitettu)
+## Käyttöliittymä (kerros 5, valmis)
 
 ### Hakemistorakenne ja CORS/tarjoilumallipäätös
 
 `frontend/`-kansio (Vite + React, JavaScript — ei TypeScript, tietoinen
 valinta) samassa repossa, ei erillisessä — yksi GitHub-linkki, ei
 ylimääräistä ylläpidettävää. Skaffoldi varmistettu ajettavaksi
-(`npm install` + `npm run build`) ennen committia, ei vielä yhtään
-Faktatutka-spesifistä komponenttia.
+(`npm install` + `npm run build`) ennen committia. (Tässä vaiheessa,
+kerroksen 5 alussa, ei vielä yhtään Faktatutka-spesifistä komponenttia —
+ks. alempana mitä kerrokseen 5 lopulta rakennettiin.)
 
 CORS ja tarjoilumalli päätetty ENNEN ensimmäistä fetch-kutsua, ei sen
 jälkeen kun selain heittäisi CORS-virheen:
