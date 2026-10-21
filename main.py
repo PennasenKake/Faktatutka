@@ -312,7 +312,16 @@ def call_llm(claim: str, max_retries: int = 1) -> LLMResult:
             format="json",
             options={
                 "temperature": 0.2,
-                "num_predict": 200,
+                # KORJATTU (ks. README, kerros 5 -bugilista, löydös 2): 200
+                # oli liian pieni katto kun selitys yrittää käsitellä pitkän,
+                # monimutkaisen (ja tässä tapauksessa virheellisen) artikkelin
+                # - selitys katkesi kesken lauseen, mutta JSON pysyi silti
+                # validina (format="json" pakottaa rakenteen valmiiksi vaikka
+                # sisältö loppuisi kesken), joten katkeaminen ei näkynyt
+                # virheenä. 350 antaa enemmän tilaa pitkälle perustelulle;
+                # ei mitattu tarkkaa ylärajaa missä katkeaminen loppuu
+                # kokonaan, ja isompi arvo hidastaa CPU-only-generointia.
+                "num_predict": 350,
                 # KORJATTU (ks. README "num_ctx-korjaus"): Ollaman oletusarvo
                 # num_ctx:lle on monissa versioissa vain 2048 tokenia, JAETTU
                 # system-promptin + <KONTEKSTI>-tagin + <LÄHTEET>-tagin (3 x
