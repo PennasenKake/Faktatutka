@@ -944,6 +944,58 @@ label suoraan `label_from_score()`:n palauttamana (ei frontendissä
 uudelleenlaskettuna), ML-läpinäkyvyys, lähdelista (enintään 3,
 rehellinen tyhjä tila) ja kalibrointimuistutus.
 
+### Elävällä pitkällä tekstillä löydetyt bugit (manuaalinen testaus kerroksen 5 yhteydessä)
+
+Kaikki aiemmat testit (pytest + käsin kokeillut lyhyet väitteet) käyttivät
+lyhyttä syötettä. Kun kerroksen 5 käyttöliittymä valmistui tarpeeksi
+pitkälle että sillä pystyi liittämään kokonaisia uutisartikkeleita, kolme
+oikeaa, ~2000–2500 sanan IS.fi-artikkelia paljasti kolme erillistä,
+aiemmin tuntematonta ongelmaa. Yksikään näistä ei ole kerroksen 5
+(käyttöliittymä) bugi — käyttöliittymä näytti joka kerta rehellisesti sen
+mitä backend palautti.
+
+**1. Promptinjektiosuojan väärä hälytys pitkällä tekstillä (2/3 testiä).**
+SYSTEM_PROMPT:n injektiosuoja (kerros 3) laukesi kahdella kolmesta
+oikeasta uutisartikkelista, vaikka kummassakaan ei ollut mitään yritystä
+ohjata mallia. Esimerkki (PHP-haavoittuvuusartikkeli, Ilta-Sanomat):
+selitys alkoi "Väitteen sisällä on ohjeita, jotka yrittävät ohjata
+lukijaa tekemään jotain, kuten...". Kolmas testi (Trump/Feinberg-artikkeli)
+ei laukaissut samaa virhettä — selitys tunnisti oikein, että lähteet
+koskevat eri aiheita kuin väite. Epäilty syy: pitkä, rakenteellisesti
+monimutkainen teksti (aikaleimat, luettelomaiset "Päätapahtumat"-osiot,
+toistuva byline) muistuttaa riittävästi ohjeistusta että 8B-parametrin
+malli erehtyy satunnaisesti. Ei korjattu — kerroksen 3 asia.
+
+**2. Selityksen katkeaminen kesken lauseen (1/3 testiä, toistettavissa).**
+Sama PHP-artikkeli-testi: selitys päättyi kesken sanaan "kuten" ilman
+jatkoa, mutta JSON pysyi silti validina (Ollaman `format="json"` pakottaa
+rakenteen valmiiksi vaikka sisältö loppuisi kesken). Epäilty syy:
+`"num_predict": 200` (main.py, sama `options`-sanakirja jossa `num_ctx`
+korjattiin) on liian pieni kun malli yrittää tuottaa pitkän, monimutkaisen
+(ja tässä tapauksessa virheellisen) perustelun. Ei korjattu.
+
+**3. RAG:n BM25-pisteet poikkeuksellisen korkeita pitkällä kyselyllä,
+lähteet eivät liity väitteeseen (2/2 testistä joissa lähdelista oli
+näkyvissä).** Normaalisti BM25-pisteet lyhyillä testiväitteillä ovat
+olleet luokkaa 5–14. Kahdella pitkällä artikkelilla pisteet olivat
+167–182 — kymmenkertaiset — ja palautetut lähteet (esim. "THL ja
+koronavirus uutisissa", "Facebookin algoritmi roskasisällöksi") eivät
+liittyneet kumpaankaan testiartikkeliin (PHP-haavoittuvuus,
+Trump/Feinberg) mitenkään. Epäilty syy: BM25-pistemäärä kasvaa karkeasti
+kyselyn pituuden mukana (enemmän termejä = enemmän kertyviä
+osittaisosumia koko korpuksessa), ja `RAG_MIN_SCORE`/
+`RAG_MIN_TOKEN_OVERLAP`-suodatin (main.py, kerros 4) on viritetty
+lyhyillä testiväitteillä eikä enää suodata tätä pois oikein pitkällä
+syötteellä. Tämä on rakenteellisesti sama "lähde löytyi ≠ lähde tukee
+väitettä" -rajoitus kuin yllä, mutta nyt myös pelkkä aihepiiriosuma
+näyttää pettävän pitkällä syötteellä. Ei korjattu — kerroksen 4 asia.
+
+Kaikki kolme jäävät avoimiksi kysymyksiksi seuraavaa kerrosten 3/4
+käsittelykierrosta varten. Yhteinen juurisyy kaikille kolmelle: mikään
+aiempi testi (automaattinen tai käsin tehty) ei ole koskaan ajanut koko
+putkea oikealla, täysimittaisella artikkelilla ennen kuin kerroksen 5
+käyttöliittymä teki siitä käytännössä mahdollista.
+
 ### Repo
 
 Julkinen: [github.com/PennasenKake/Faktatutka](https://github.com/PennasenKake/Faktatutka).
