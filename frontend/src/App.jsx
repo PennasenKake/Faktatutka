@@ -1,120 +1,99 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
 import './App.css'
+import { useAnalyze } from './useAnalyze'
+import ResultView from './ResultView'
+
+// Ei kova yläraja - backend ei rajoita tekstin pituutta (AnalyzeRequest.text
+// on pelkkä str), tämä on pelkkä läpinäkyvyysvihje käyttäjälle joka liittyy
+// num_ctx=8192-löydökseen (ks. README): hyvin pitkä artikkeli voi silti olla
+// riski, tarkkaa rajaa ei ole koskaan mitattu.
+const LONG_TEXT_WARNING_THRESHOLD = 8000
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [claimText, setClaimText] = useState('')
+  const { status, result, errorMessage, analyze, reset } = useAnalyze()
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    analyze(claimText)
+  }
+
+  function handleReset() {
+    setClaimText('')
+    reset()
+  }
+
+  const showResetLink = status === 'success' || status === 'error'
+  const charCount = claimText.length
+  const isLongText = charCount > LONG_TEXT_WARNING_THRESHOLD
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+      <header className="app-header">
+        <div className="app-header-inner">
+          <div>
+            <h1>Faktatutka</h1>
+            <p className="tagline">Rehellinen epävarmuus, näkyvät lähteet.</p>
+          </div>
+          {showResetLink && (
+            <button type="button" className="reset-link" onClick={handleReset}>
+              ← Uusi analyysi
+            </button>
+          )}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+      </header>
+
+      <main>
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="claim-text">Väite tai uutisteksti</label>
+          <textarea
+            id="claim-text"
+            rows={7}
+            value={claimText}
+            onChange={(e) => setClaimText(e.target.value)}
+            disabled={status === 'loading'}
+            placeholder='Esim. "Hallitus aikoo nostaa polttoaineveroa 15 prosentilla ensi vuonna", tai liitä artikkelin koko teksti.'
+          />
+          <div className="form-footer">
+            <span className={'char-count' + (isLongText ? ' char-count-warn' : '')}>
+              {charCount} merkkiä
+              {isLongText && ' — hyvin pitkä, voi katketa kontekstirajaan (ei vielä mitattu raja)'}
+            </span>
+            <button type="submit" disabled={claimText.trim() === '' || status === 'loading'}>
+              {status === 'loading' ? 'Analysoidaan…' : 'Analysoi teksti'}
+            </button>
+          </div>
+        </form>
+
+        {status === 'loading' && (
+          <div className="loading-state" role="status" aria-live="polite">
+            <span className="spinner" aria-hidden="true" />
+            <p>Analysoidaan väitettä…</p>
+            <p className="muted">
+              Tyypillisesti muutama sekunti — paikallinen kielimalli, ei pilvi-API:a.
+            </p>
+          </div>
+        )}
+
+        {status === 'success' && result && <ResultView result={result} />}
+
+        {status === 'error' && (
+          <p className="error-text">
+            {errorMessage || 'Analyysi epäonnistui.'} Katso tarvittaessa konsoli (F12).
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+        )}
+      </main>
+
+      <footer className="app-footer">
+        <a
+          href="https://github.com/PennasenKake/Faktatutka"
+          target="_blank"
+          rel="noopener noreferrer"
         >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+          github.com/PennasenKake/Faktatutka
+        </a>
+        <span className="muted"> · Avoin lähdekoodi · Paikallinen kielimalli, ei pilvi-API:a</span>
+      </footer>
     </>
   )
 }
