@@ -973,7 +973,17 @@ jatkoa, mutta JSON pysyi silti validina (Ollaman `format="json"` pakottaa
 rakenteen valmiiksi vaikka sisältö loppuisi kesken). Epäilty syy:
 `"num_predict": 200` (main.py, sama `options`-sanakirja jossa `num_ctx`
 korjattiin) on liian pieni kun malli yrittää tuottaa pitkän, monimutkaisen
-(ja tässä tapauksessa virheellisen) perustelun. Ei korjattu.
+(ja tässä tapauksessa virheellisen) perustelun.
+
+**Päivitys 24.10.2026 — korjattu, todennettu epäsuorasti.** `num_predict`
+nostettu 200 → 350. Alkuperäistä PHP-artikkelia ei ollut enää tallessa
+täsmälliseen uudelleentestaukseen, joten varmistus tehtiin toisella,
+yhtä pitkällä (~5200 merkkiä) suomenkielisellä artikkelilla (sama
+Kreml/Ukrainan rauhanneuvottelut -juttu kuin löydöksessä 3 alla) —
+selitys valmistui kokonaan ilman katkeamista kesken lauseen. Tämä on
+vahvaa epäsuoraa näyttöä, muttei täsmällinen toisto alkuperäisestä
+katkeamistapauksesta — tarkkaa rajaa mille pituudelle/monimutkaisuudelle
+350 riittää ei ole mitattu. Merkitään korjatuksi tällä varauksella.
 
 **3. RAG:n BM25-pisteet poikkeuksellisen korkeita pitkällä kyselyllä,
 lähteet eivät liity väitteeseen (2/2 testistä joissa lähdelista oli
@@ -1049,11 +1059,27 @@ kysymykseen englanninkielisestä rinnakkaispolusta (ks. erillinen
 avoimet kysymykset -sivu): pieni määrä oikeaa englanninkielistä
 sisältöä on jo olemassa nykyisessä, muka yksikielisessä putkessa.
 
-Kaikki neljä jäävät avoimiksi kysymyksiksi seuraavaa kerrosten 3/4
-käsittelykierrosta varten. Yhteinen juurisyy kaikille neljälle: mikään
-aiempi testi (automaattinen tai käsin tehty) ei ole koskaan ajanut koko
-putkea oikealla, täysimittaisella artikkelilla ennen kuin kerroksen 5
-käyttöliittymä teki siitä käytännössä mahdollista.
+**Päivitys 24.10.2026 — korjattu, todennettu kahdella tapauksella.**
+`SYSTEM_PROMPT` ja `context_note` (main.py) muutettu kieliriippumattomiksi
+— kumpikaan ei enää mainitse suomea esimerkkinä, ja `context_note`
+kieltää eksplisiittisesti päättelemästä tekstin kieltä tunnettujen
+sanojen määrästä. Todennettu kahdesti elävää palvelinta vasten: (1)
+sama BBC-artikkeli uudestaan (286 tunnettua sanaa) — selitys ei enää
+väitä mitään kielestä, toteaa vain pistemäärän mahdollisesti
+epäluotettavaksi; (2) suomenkielinen Kreml-artikkeli (19 tunnettua
+sanaa, aidosti vähän) — selitys toteaa oikein pistemäärän
+epäluotettavaksi vähäisten tunnettujen sanojen takia, jälleen ilman
+väitettä kielestä. Molemmat suunnat (paljon ja vähän tunnettuja sanoja)
+käyttäytyvät nyt odotetusti.
+
+Kahdeksi neljästä (2, selityksen katkeaminen; 4, kielihallusinaatio)
+on nyt korjattu ja todennettu 24.10.2026, ks. päivitykset yllä. Kaksi
+jää yhä avoimeksi (1, promptinjektion väärä hälytys; 3, BM25-inflaatio)
+seuraavaa kerrosten 3/4 käsittelykierrosta varten. Yhteinen juurisyy
+kaikille neljälle oli sama: mikään aiempi testi (automaattinen tai
+käsin tehty) ei ollut koskaan ajanut koko putkea oikealla,
+täysimittaisella artikkelilla ennen kuin kerroksen 5 käyttöliittymä
+teki siitä käytännössä mahdollista.
 
 ### Repo
 
